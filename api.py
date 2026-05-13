@@ -15,8 +15,8 @@ from pydantic import BaseModel
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("atelier-api")
 
-DB_PATH = os.environ.get("DB_PATH", "/data/luxury_towel_suppliers/suppliers.db")
-DEPLOY_DIR = os.environ.get("DEPLOY_DIR", "/data/luxury_towel_suppliers/deploy")
+DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "suppliers.db"))
+DEPLOY_DIR = os.environ.get("DEPLOY_DIR", os.path.join(os.path.dirname(__file__), "deploy"))
 
 app = FastAPI(title="Atelier Agentic Growth System", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
