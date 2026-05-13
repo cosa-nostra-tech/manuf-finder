@@ -13,6 +13,33 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO)
+
+# ─── Debug endpoint ──────────────────────────────────────────
+@app.get("/api/debug/deps")
+def debug_deps():
+    """Check if search dependencies are installed."""
+    deps = {}
+    for mod_name in ['ddgs', 'duckduckgo_search', 'bs4', 'requests']:
+        try:
+            m = __import__(mod_name)
+            deps[mod_name] = {'installed': True, 'version': getattr(m, '__version__', 'unknown')}
+        except ImportError as e:
+            deps[mod_name] = {'installed': False, 'error': str(e)}
+    # Try a quick search
+    try:
+        from ddgs import DDGS
+        with DDGS() as d:
+            r = list(d.text('eyewear manufacturer', max_results=2))
+        deps['search_test'] = {'works': True, 'results': len(r)}
+    except Exception as e:
+        try:
+            from duckduckgo_search import DDGS as DDGS2
+            with DDGS2() as d:
+                r = list(d.text('eyewear manufacturer', max_results=2))
+            deps['search_test'] = {'works': True, 'results': len(r), 'via': 'duckduckgo_search'}
+        except Exception as e2:
+            deps['search_test'] = {'works': False, 'error': str(e), 'fallback_error': str(e2)}
+    return deps
 logger = logging.getLogger("atelier-api")
 
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "suppliers.db"))
