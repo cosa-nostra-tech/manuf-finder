@@ -13,6 +13,13 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("atelier-api")
+
+DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "suppliers.db"))
+DEPLOY_DIR = os.environ.get("DEPLOY_DIR", os.path.join(os.path.dirname(__file__), "deploy"))
+
+app = FastAPI(title="Atelier Agentic Growth System", version="1.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # ─── Debug endpoint ──────────────────────────────────────────
 @app.get("/api/debug/deps")
@@ -40,13 +47,6 @@ def debug_deps():
         except Exception as e2:
             deps['search_test'] = {'works': False, 'error': str(e), 'fallback_error': str(e2)}
     return deps
-logger = logging.getLogger("atelier-api")
-
-DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "suppliers.db"))
-DEPLOY_DIR = os.environ.get("DEPLOY_DIR", os.path.join(os.path.dirname(__file__), "deploy"))
-
-app = FastAPI(title="Atelier Agentic Growth System", version="1.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # ─── DB helpers ───────────────────────────────────────────────
 @contextmanager
