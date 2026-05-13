@@ -48,6 +48,22 @@ def debug_deps():
             deps['search_test'] = {'works': False, 'error': str(e), 'fallback_error': str(e2)}
     return deps
 
+@app.get("/api/debug/discover/{brief_id}")
+def debug_discover(brief_id: int):
+    """Run discovery inline and return the error if it fails."""
+    try:
+        from discovery_agent import discover_suppliers
+        with get_db() as db:
+            row = db.execute("SELECT * FROM briefs WHERE id=?", [brief_id]).fetchone()
+            if not row:
+                return {"error": "Brief not found"}
+            brief = dict(row)
+        results = discover_suppliers(brief)
+        return {"success": True, "count": len(results), "suppliers": [s.get("trade_name","?") for s in results[:5]]}
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+
 # ─── DB helpers ───────────────────────────────────────────────
 @contextmanager
 def get_db():
