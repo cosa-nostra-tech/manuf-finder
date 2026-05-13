@@ -41,6 +41,24 @@ def dict_from_row(row):
 def dict_list_from_rows(rows):
     return [dict(r) for r in rows]
 
+# ─── DB Health ───────────────────────────────────────────────
+@app.get("/api/health")
+def health():
+    db_info = {"db_path": DB_PATH, "db_exists": os.path.exists(DB_PATH)}
+    try:
+        with get_db() as db:
+            tables = [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+            counts = {}
+            for t in tables:
+                try:
+                    counts[t] = db.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+                except:
+                    counts[t] = "error"
+            db_info["tables"] = counts
+    except Exception as e:
+        db_info["error"] = str(e)
+    return {"status": "ok", "db": db_info}
+
 # ─── Models ───────────────────────────────────────────────────
 class BriefCreate(BaseModel):
     product_name: str
