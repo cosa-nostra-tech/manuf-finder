@@ -144,6 +144,65 @@ _CONTACT_TITLE_PATTERNS = [
     "Representative",
 ]
 
+# Words that indicate a legal-name match is NOT a real company name
+_LEGAL_NAME_STOPWORDS = frozenset({
+    "about", "quality", "service", "services", "advantage", "advantages",
+    "product", "products", "solution", "solutions", "technology", "innovation",
+    "contact", "home", "blog", "news", "faq", "career", "careers",
+    "resource", "resources", "support", "help", "learn", "discover",
+    "welcome", "introduction", "overview", "history", "mission", "vision",
+    "value", "packaging", "package", "packag", "assurance", "certificate",
+    "certification", "past", "present", "future", "glasses", "sunglasses",
+})
+
+# Regex to detect a company suffix within a word/phrase
+_COMPANY_SUFFIX_RE = re.compile(
+    r"\b(?:Co\.,?\s*L(?:td|TD)|Inc\.?|LLC|L\.L\.C\.?|GmbH|AG|S\.A\.?|"
+    r"Pty\s+Ltd|Pte\s+Ltd|Ltd\.?|LTD|Limited|LIMITED|Corporation|Corp\.?)\b"
+)
+
+# Trailing words that end a contact-person name match
+_CONTACT_TRAILING_STOPWORDS = frozenset({
+    "address", "email", "phone", "tel", "fax", "wechat", "whatsapp",
+    "mobile", "cell", "skype", "linkedin", "website", "web", "http",
+    "position", "title", "dept", "department",
+})
+
+# Stopwords for fake "City" matches in location extraction
+_LOCATION_CITY_STOPWORDS = frozenset({
+    "machine", "chiller", "pellet", "bag", "bagging", "mill", "press",
+    "pump", "compressor", "generator", "motor", "engine", "turbine",
+    "crusher", "grinder", "mixer", "blender", "dryer", "heater",
+    "cooler", "filter", "conveyor", "elevator", "crane", "forklift",
+    "welding", "cutting", "drilling", "milling", "lathe", "cnc",
+    "injection", "extrusion", "molding", "stamping", "casting",
+    "forging", "plating", "coating", "painting", "printing",
+    "embroidery", "knitting", "weaving", "spinning", "dyeing",
+    "finishing", "washing", "ironing", "sewing", "stitching",
+    "packing", "labeling", "testing", "inspection", "sorting",
+    "air", "water", "oil", "gas", "steam", "hot", "cold", "big",
+})
+
+# Whitelist of ~50 most common Chinese manufacturing cities and provinces
+_CHINESE_LOCATIONS = frozenset({
+    "Guangdong", "Zhejiang", "Jiangsu", "Shandong", "Fujian", "Hebei",
+    "Henan", "Hubei", "Hunan", "Anhui", "Sichuan", "Liaoning",
+    "Shaanxi", "Jiangxi", "Guangxi", "Guizhou", "Yunnan", "Shanxi",
+    "Heilongjiang", "Jilin", "Gansu", "Inner Mongolia", "Hainan",
+    "Ningxia", "Qinghai", "Tibet", "Xinjiang",
+    "Guangzhou", "Shenzhen", "Dongguan", "Foshan", "Shantou",
+    "Zhongshan", "Zhuhai", "Huizhou", "Jiangmen", "Shunde",
+    "Yiwu", "Hangzhou", "Ningbo", "Wenzhou", "Shaoxing",
+    "Jiaxing", "Taizhou", "Jinhua", "Huzhou", "Cixi",
+    "Nanjing", "Suzhou", "Wuxi", "Changzhou", "Nantong",
+    "Yangzhou", "Zhenjiang", "Xuzhou", "Kunshan", "Changshu",
+    "Qingdao", "Jinan", "Weifang", "Yantai", "Linyi",
+    "Xiamen", "Quanzhou", "Fuzhou", "Zhangzhou", "Putian",
+    "Shanghai", "Beijing", "Tianjin", "Chongqing",
+    "Chengdu", "Wuhan", "Changsha", "Zhengzhou", "Hefei",
+    "Shijiazhuang", "Baoding", "Tangshan",
+})
+
 # Key fields used for data_completeness_score calculation
 _COMPLETENESS_FIELDS = [
     "legal_name",
@@ -180,13 +239,18 @@ _RE_WECHAT = re.compile(
 )
 _RE_WEIXIN_LINK = re.compile(r"weixin\.qq\.com/([a-zA-Z0-9_\-]+)")
 _RE_MOQ = re.compile(
-    r"(?:MOQ|moq|min(?:imum)?\s*order)"
+    r"(?:MOQ|moq|min(?:imum)?\.?\s*order|start\s*order)"
     r"[\s:：=]*([0-9,]+)\s*(?:pcs?|pieces?|units?|sets?|items?|pairs?)?",
     re.IGNORECASE,
 )
 _RE_MOQ_STANDALONE = re.compile(
     r"([0-9,]+)\s*(?:pcs?|pieces?|units?|sets?|items?|pairs?)\s+"
     r"(?:min(?:imum)?|MOQ|moq|order)",
+    re.IGNORECASE,
+)
+_RE_MOQ_PAREN = re.compile(
+    r"([0-9,]+)\s*(?:pcs?|pieces?|units?|sets?|items?|pairs?)"
+    r"\s*\(\s*(?:Min\.?\s*Order|MOQ|Minimum\s*Order)\s*\)",
     re.IGNORECASE,
 )
 _RE_YEAR_FOUNDED = re.compile(
@@ -199,16 +263,16 @@ _RE_EXPERIENCE = re.compile(
     re.IGNORECASE,
 )
 _RE_LEGAL_NAME = re.compile(
-    r"([A-Z][a-zA-Z0-9&'\- ]{2,}?"
-    r"(?:Co\.,?\s*Ltd|Inc\.?|LLC|L\.L\.C\.?|GmbH|AG|S\.A\.?|Pty\s+Ltd|"
-    r"Pte\s+Ltd|Ltd\.?|Limited|Corporation|Corp\.?))",
-    re.IGNORECASE,
+    r"([A-Z][a-zA-Z0-9&'\-]+\s+[A-Z][a-zA-Z0-9&'\-]+"
+    r"(?:\s+[A-Z][a-zA-Z0-9&'\-]+)*\s+"
+    r"(?:Co\.,?\s*L(?:td|TD)|Inc\.?|LLC|L\.L\.C\.?|GmbH|AG|S\.A\.?|"
+    r"Pty\s+Ltd|Pte\s+Ltd|Ltd\.?|LTD|Limited|LIMITED|Corporation|Corp\.?))\b"
 )
 _RE_BRAND_MENTION = re.compile(
-    r"(?:works?\s+with|suppl(?:y|ies|ier)\s+(?:to|for)|clients?\s+include|"
-    r"partner(?:s)?\s+(?:of|with)|customers?\s+include|brands?\s+include|"
-    r"cooperat(?:e|ing|ion)\s+with|serv(?:e|ing)\s+(?:(?:major|leading)\s+)?"
-    r"(?:brands?|companies?|retailers?|chains?))[:\s]*([^\.;]+)",
+    r"(?:brands?\s+including|clients?\s+include|customers?\s+include|"
+    r"suppl(?:y|ies|ied)\s+to|supplied\s+to|partner(?:s)?\s+of|"
+    r"brands?\s+include)"
+    r"[:\s]*([^\.;]+)",
     re.IGNORECASE,
 )
 _RE_PHONE = re.compile(
@@ -337,27 +401,73 @@ def _extract_wechat(text: str) -> list[str]:
     return list(dict.fromkeys(ids))  # dedupe preserving order
 
 
-def _extract_legal_names(text: str) -> list[str]:
-    """Return potential legal entity names found in *text*."""
-    names = _RE_LEGAL_NAME.findall(text)
-    # Dedupe and strip; filter out nav text and too-long matches
-    nav_words = {"home", "about", "contact", "products", "services", "blog",
-                 "faq", "login", "cart", "menu", "search", "newsletter",
-                 "facebook", "instagram", "twitter", "linkedin", "youtube"}
+def _extract_legal_names(soup: BeautifulSoup) -> list[str]:
+    """Return potential legal entity names found in targeted HTML elements.
+
+    Only searches <title>, <h1>, <footer>, and elements with class/id
+    containing company/legal/copyright/about/footer keywords — avoids
+    matching random body text like nav bars or marketing paragraphs.
+    Requires a company suffix (Ltd, GmbH, etc.), at least 2 words before
+    the suffix, and no stop-words.
+    """
+    targeted_texts: list[str] = []
+
+    # 1. <title> tag
+    title_tag = soup.find("title")
+    if title_tag:
+        t = title_tag.get_text(strip=True)
+        if t:
+            targeted_texts.append(t)
+
+    # 2. <h1> tags
+    for h1 in soup.find_all("h1"):
+        t = h1.get_text(separator=" ", strip=True)
+        if t:
+            targeted_texts.append(t)
+
+    # 3. <footer> tags
+    for footer in soup.find_all("footer"):
+        t = footer.get_text(separator=" ", strip=True)
+        if t:
+            targeted_texts.append(t)
+
+    # 4. Elements with class/id containing company-related keywords
+    company_kw = ("company", "legal", "copyright", "about", "footer",
+                  "corp", "business", "org")
+    for tag in soup.find_all(True):
+        cls_str = " ".join(tag.get("class", []))
+        tag_id = tag.get("id", "") or ""
+        ident = (cls_str + " " + tag_id).lower()
+        if any(kw in ident for kw in company_kw):
+            t = tag.get_text(separator=" ", strip=True)
+            if t and len(t) < 300:
+                targeted_texts.append(t)
+
+    combined = " ".join(targeted_texts)
+    if not combined:
+        return []
+
     seen: set[str] = set()
     result: list[str] = []
-    for n in names:
-        n = n.strip()
-        # Skip if too long (likely nav text, not a company name)
-        if len(n) > 80:
+    for m in _RE_LEGAL_NAME.finditer(combined):
+        name = m.group(1).strip()
+        if len(name) > 80:
             continue
-        # Skip if first 3 words are all nav words
-        words = n.split()[:3]
-        if all(w.lower() in nav_words for w in words):
+        words = name.split()
+        # Count words before the company suffix
+        prefix_count = 0
+        for w in words:
+            if _COMPANY_SUFFIX_RE.search(w):
+                break
+            prefix_count += 1
+        if prefix_count < 2:
             continue
-        if n.lower() not in seen:
-            seen.add(n.lower())
-            result.append(n)
+        # Reject if any word is a stopword
+        if any(w.lower() in _LEGAL_NAME_STOPWORDS for w in words):
+            continue
+        if name.lower() not in seen:
+            seen.add(name.lower())
+            result.append(name)
     return result
 
 
@@ -365,6 +475,7 @@ def _extract_moq(text: str) -> list[str]:
     """Return MOQ values found in *text*."""
     found = _RE_MOQ.findall(text)
     found.extend(_RE_MOQ_STANDALONE.findall(text))
+    found.extend(_RE_MOQ_PAREN.findall(text))
     return list(dict.fromkeys(found))
 
 
@@ -397,47 +508,73 @@ def _extract_cert_keywords(text: str) -> list[str]:
 
 
 def _extract_brand_mentions(text: str) -> list[str]:
-    """Return brand/client mentions from *text*."""
+    """Return brand/client mentions from *text*.
+
+    Only accepts brands mentioned in specific contexts
+    ("brands including", "clients include", "supplied to", etc.).
+    Rejects mentions containing marketing verbs.  Each individual brand
+    name must be ≤3 words and start with a capital letter.
+    """
+    _BRAND_MARKETING_VERBS = frozenset({
+        "develop", "create", "help", "assist", "provide", "offer",
+        "ensure", "deliver", "improve", "enhance", "support", "enable",
+        "produce", "manufacture", "customize", "design", "build",
+    })
     found: list[str] = []
     for m in _RE_BRAND_MENTION.finditer(text):
         mention = m.group(1).strip().rstrip(".,; ")
-        if mention and len(mention) < 200:
-            # Split on commas/and to get individual brand names
-            parts = re.split(r",|\band\b", mention)
-            for p in parts:
-                p = p.strip().rstrip(".,; ")
-                # Skip non-brand noise (sentences, marketing copy)
-                if not p or len(p) > 60:
-                    continue
-                # Skip if it looks like a sentence (has common English filler words)
-                common = {"whether", "launching", "scaling", "sourcing", "volume",
-                          "model", "that", "this", "have", "with", "from", "your"}
-                words = p.lower().split()
-                common_count = sum(1 for w in words if w in common)
-                if common_count >= 2:
-                    continue
-                if p not in found:
-                    found.append(p)
+        if not mention or len(mention) > 200:
+            continue
+        # Reject the entire mention if it contains marketing verbs
+        mention_lower = mention.lower()
+        if any(f" {v} " in f" {mention_lower} " for v in _BRAND_MARKETING_VERBS):
+            continue
+        # Split on commas/and to get individual brand names
+        parts = re.split(r",|\band\b", mention)
+        for p in parts:
+            p = p.strip().rstrip(".,; ")
+            if not p:
+                continue
+            words = p.split()
+            # Each brand name ≤3 words, first word starts with capital
+            if len(words) > 3:
+                continue
+            if not words[0][0].isupper():
+                continue
+            if p not in found:
+                found.append(p)
     return found
 
 
 def _extract_contact_person(text: str) -> Optional[str]:
-    """Return a contact person name found in *text*."""
+    """Return a contact person name found in *text*.
+
+    Stops name match at common trailing label words (Address, Email, etc.).
+    Only accepts if the name part (after the title) has ≤3 words.
+    Strips any trailing non-name words.
+    """
     for pattern in _CONTACT_TITLE_PATTERNS:
         idx = text.find(pattern)
         if idx != -1:
             # Grab text after the title up to next newline or punctuation
             after = text[idx + len(pattern) : idx + len(pattern) + 60]
-            # Try to extract a name (letters, spaces, dots, hyphens) — must end at punctuation
+            # Try to extract a name (letters, spaces, dots, hyphens)
             name_match = re.match(r"[\s:：]*([A-Z][a-zA-Z\s\.\-]{1,25}?)(?:[,;\n|]|$)", after)
             if not name_match:
                 # Broader match but validate it looks like a person name
                 name_match = re.match(r"[\s:：]*([A-Z][a-z]+\s+[A-Z][a-z]+)", after)
             if name_match:
                 name = name_match.group(1).strip()
-                # Validate: must be 2-30 chars, no nav words, look like a name
-                if 2 <= len(name) <= 30 and not any(w in name.lower() for w in ("home", "about", "product", "service", "blog")):
-                    return f"{pattern} {name}".strip()
+                # Strip trailing stop-words (Address, Email, Phone, etc.)
+                name_words = name.split()
+                while name_words and name_words[-1].lower().rstrip(".,:") in _CONTACT_TRAILING_STOPWORDS:
+                    name_words.pop()
+                name = " ".join(name_words)
+                # Validate: ≤3 words after the title, 2-30 chars, no nav words
+                if (2 <= len(name) <= 30
+                        and len(name_words) <= 3
+                        and not any(w in name.lower() for w in ("home", "about", "product", "service", "blog"))):
+                    return re.sub(r"\s+", " ", f"{pattern} {name}").strip()
     return None
 
 
@@ -591,7 +728,7 @@ def _scrape_homepage(base_url: str, client: httpx.Client, sr: ScrapeResult) -> N
         sr.add_email(email)
     for wc in _extract_wechat(text):
         sr.wechat_id = sr.wechat_id or wc
-    for name in _extract_legal_names(text):
+    for name in _extract_legal_names(soup):
         sr.legal_name = sr.legal_name or name
     for brand in _extract_brand_mentions(text):
         sr.add_brand(brand)
@@ -615,7 +752,7 @@ def _scrape_about_page(base_url: str, client: httpx.Client, sr: ScrapeResult) ->
             text = soup.get_text(separator=" ", strip=True)
 
             # Legal name
-            for name in _extract_legal_names(text):
+            for name in _extract_legal_names(soup):
                 sr.legal_name = sr.legal_name or name
 
             # Founding year / experience
@@ -652,26 +789,66 @@ def _scrape_about_page(base_url: str, client: httpx.Client, sr: ScrapeResult) ->
 
 
 def _extract_locations_from_text(text: str) -> list[str]:
-    """Try to extract factory/city/province location mentions."""
+    """Try to extract factory/city/province location mentions.
+
+    Prefers the "City, Province, China" pattern.  For other city/province
+    matches, only accepts if the place name is in our Chinese location
+    whitelist.  Rejects fake "City" matches like "Machine City" using a
+    stopword list.
+    """
     locations: list[str] = []
-    # Common Chinese province/city patterns
-    location_pattern = re.compile(
-        r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,?\s*"
-        r"(?:Province|City|District|County|Town|Village|Industrial(?:\s+Zone|Area|Park)))",
-        re.IGNORECASE,
-    )
-    for m in location_pattern.finditer(text):
-        loc = m.group(0).strip()
-        if loc not in locations:
-            locations.append(loc)
-    # Also try "City, Province, China" patterns
+    seen: set[str] = set()
+
+    # Sort by length descending so "Inner Mongolia" is tried before "Inner"
+    sorted_locs = sorted(_CHINESE_LOCATIONS, key=len, reverse=True)
+
+    # --- Preferred: "City, Province, China" pattern ---
     china_pattern = re.compile(
-        r"([A-Z][a-zA-Z\s]+,\s*[A-Z][a-zA-Z\s]+,\s*China)",
+        r"(" + "|".join(re.escape(c) for c in sorted_locs)
+        + r")\s*(?:City)?\s*,\s*("
+        + "|".join(re.escape(p) for p in sorted_locs)
+        + r")\s*(?:Province)?\s*,\s*China\b"
     )
     for m in china_pattern.finditer(text):
-        loc = m.group(0).strip()
-        if loc not in locations:
+        city = m.group(1).strip()
+        prov = m.group(2).strip()
+        loc = f"{city}, {prov}, China"
+        if loc not in seen:
+            seen.add(loc)
             locations.append(loc)
+
+    # --- Secondary: "City, Province" pattern ---
+    cp_pattern = re.compile(
+        r"([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\s*(?:City)?\s*,\s*"
+        r"([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\s*(?:Province|City)"
+    )
+    for m in cp_pattern.finditer(text):
+        city_part = m.group(1).strip()
+        prov_part = m.group(2).strip()
+        # Reject stopwords
+        if city_part.lower() in _LOCATION_CITY_STOPWORDS:
+            continue
+        # The city or province must be in our whitelist
+        if city_part in _CHINESE_LOCATIONS or prov_part in _CHINESE_LOCATIONS:
+            loc = m.group(0).strip()
+            if loc not in seen:
+                seen.add(loc)
+                locations.append(loc)
+
+    # --- Tertiary: direct whitelist match with suffix ---
+    for loc_name in sorted_locs:
+        # Match "[loc_name] City" or "[loc_name] Province" etc.
+        pattern = re.compile(
+            re.escape(loc_name) + r"\s+(Province|City|District|County|Town|Village|"
+            r"Industrial\s*(?:Zone|Area|Park)|Autonomous\s+Region)",
+            re.IGNORECASE,
+        )
+        for m in pattern.finditer(text):
+            loc = m.group(0).strip()
+            if loc not in seen:
+                seen.add(loc)
+                locations.append(loc)
+
     return locations
 
 
@@ -838,7 +1015,7 @@ def _scrape_alibaba_storefront(url: str, sr: ScrapeResult) -> None:
             text = soup.get_text(separator=" ", strip=True)
 
             # Legal company name — Alibaba always shows this
-            for name in _extract_legal_names(text):
+            for name in _extract_legal_names(soup):
                 sr.legal_name = sr.legal_name or name
 
             # Business type
@@ -950,7 +1127,7 @@ def _scrape_mic_storefront(url: str, sr: ScrapeResult) -> None:
             text = soup.get_text(separator=" ", strip=True)
 
             # Legal name
-            for name in _extract_legal_names(text):
+            for name in _extract_legal_names(soup):
                 sr.legal_name = sr.legal_name or name
 
             # Business type
@@ -1016,67 +1193,80 @@ def _calc_qualification_score(sr: ScrapeResult) -> int:
     Calculate qualification score 0-100.
 
     Breakdown:
-      Certifications:        25 pts max
-      Brands worked with:    20 pts max
-      Data completeness:     20 pts max
-      Platform verification: 15 pts max
-      Experience:            10 pts max
-      MOQ clarity:           10 pts max
+      Has legal_name:           +15
+      Has email:                +10
+      Has contact_name:         +10
+      Has wechat_id:            +5
+      Certs (count):  0→0, 1-2→10, 3-4→15, 5+→20
+      Has factory_locations:    +10
+      Has moq:                  +10
+      Has brands_worked_with:   +10
+      supplier_type:  Manufacturer→10, Trading Company→5
+      Founded >10 yrs ago:       +5
+      Platform verified:         +5
+      Cap at 100
     """
     score = 0
 
-    # Certifications (25)
-    cert_count = len(sr._certs)
-    if cert_count >= 5:
-        score += 25
-    elif cert_count >= 3:
-        score += 18
-    elif cert_count >= 2:
-        score += 12
-    elif cert_count >= 1:
-        score += 6
-
-    # Brands worked with (20)
-    brand_count = len(sr._brands)
-    if brand_count >= 5:
-        score += 20
-    elif brand_count >= 3:
-        score += 14
-    elif brand_count >= 2:
-        score += 10
-    elif brand_count >= 1:
-        score += 5
-
-    # Data completeness (20) — proportional to completeness score
-    completeness = _calc_completeness_score(sr)
-    score += int(20 * completeness / 100)
-
-    # Platform verification (15)
-    if sr.platform_verified:
+    # Legal name
+    if sr.legal_name:
         score += 15
 
-    # Experience (10)
-    if sr.market_experience:
-        exp_match = re.search(r"(\d+)", sr.market_experience)
-        if exp_match:
-            years = int(exp_match.group(1))
-            if years >= 20:
-                score += 10
-            elif years >= 10:
-                score += 7
-            elif years >= 5:
-                score += 5
-            elif years >= 2:
-                score += 3
-        else:
-            score += 3  # Some experience info exists
-    if sr.platform_years and sr.platform_years >= 5:
-        score = min(score + 3, 100)
+    # Email
+    if sr.email:
+        score += 10
 
-    # MOQ clarity (10)
+    # Contact name
+    if sr.contact_name:
+        score += 10
+
+    # WeChat
+    if sr.wechat_id:
+        score += 5
+
+    # Certifications
+    cert_count = len(sr._certs)
+    if cert_count >= 5:
+        score += 20
+    elif cert_count >= 3:
+        score += 15
+    elif cert_count >= 1:
+        score += 10
+
+    # Factory locations
+    if sr.factory_locations:
+        score += 10
+
+    # MOQ
     if sr.moq:
         score += 10
-    elif sr.moq_info:
+
+    # Brands worked with
+    if sr.brands_worked_with:
+        score += 10
+
+    # Supplier type
+    if sr.supplier_type:
+        stype_lower = sr.supplier_type.lower()
+        if "manufacturer" in stype_lower:
+            score += 10
+        elif "trading" in stype_lower:
+            score += 5
+
+    # Founded >10 years ago
+    if sr.founding_year:
+        try:
+            founded = int(sr.founding_year)
+            current_year = 2026
+            if current_year - founded > 10:
+                score += 5
+        except ValueError:
+            pass
+    if sr.platform_years and sr.platform_years > 10:
+        score += 5
+
+    # Platform verified
+    if sr.platform_verified:
         score += 5
 
     return min(score, 100)
@@ -1086,43 +1276,41 @@ def _calc_completeness_score(sr: ScrapeResult) -> int:
     """
     Calculate data completeness score 0-100.
 
-    Based on % of key fields that are filled.
+    Count non-null/non-empty fields out of 14 key fields:
+      trade_name, legal_name, website, email, contact_name,
+      wechat_id, factory_locations, certs_and_audits, moq,
+      brands_worked_with, supplier_type, product_categories,
+      market_experience, qualification_score
+
+    Return (filled / 14) * 100, rounded.
     """
+    # We use sr fields plus the input supplier dict's trade_name / website
+    # Since we don't have the original dict here, we check sr + known fields
     filled = 0
-    total = len(_COMPLETENESS_FIELDS)
+    total = 14
 
-    field_map = {
-        "legal_name": sr.legal_name,
-        "factory_locations": sr.factory_locations,
-        "supplier_type": sr.supplier_type,
-        "supplier_subtype": sr.supplier_subtype,
-        "product_categories": sr.product_categories,
-        "product_sub_categories": sr.product_sub_categories,
-        "certs_and_audits": sr.certs_and_audits,
-        "regulatory_compliance": sr.regulatory_compliance,
-        "brands_worked_with": sr.brands_worked_with,
-        "contact_name": sr.contact_name,
-        "market_experience": sr.market_experience,
-        "certification_link": sr.certification_link,
-        "moq": sr.moq,
-        "moq_info": sr.moq_info,
-        "email": sr.email,
-        "wechat_id": sr.wechat_id,
-        # These will be filled later; count them as 0 for now
-        "qualification_score": None,
-        "data_completeness_score": None,
-    }
+    fields = [
+        sr.legal_name,
+        sr.email,
+        sr.contact_name,
+        sr.wechat_id,
+        sr.factory_locations,
+        sr.certs_and_audits,
+        sr.moq,
+        sr.brands_worked_with,
+        sr.supplier_type,
+        sr.product_categories,
+        sr.market_experience,
+        sr.founding_year,  # proxy for market_experience detail
+        sr.phone,
+        sr.company_description,
+    ]
 
-    for fname, fval in field_map.items():
+    for fval in fields:
         if fval is not None and str(fval).strip():
             filled += 1
 
-    # Subtract 2 from total for the score fields themselves (they're computed)
-    effective_total = total - 2
-    if effective_total <= 0:
-        return 0
-
-    return int(100 * filled / effective_total)
+    return int(round(100 * filled / total))
 
 
 # ---------------------------------------------------------------------------
