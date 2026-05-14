@@ -350,7 +350,11 @@ def trigger_enrichment(brief_id: int, background_tasks: BackgroundTasks):
     return {"status": "enrichment_started", "brief_id": brief_id}
 
 def run_enrichment(brief_id: int):
-    """Background task: enrich discovered suppliers with detailed data."""
+    """Background task: enrich discovered suppliers with detailed data.
+
+    Processes suppliers in small batches to avoid timeout.
+    Commits each batch so progress is preserved even if later batches fail.
+    """
     logger.info(f"Enrichment started for brief {brief_id}")
     try:
         from enrich_agent import enrich_suppliers
@@ -368,18 +372,31 @@ def run_enrichment(brief_id: int):
         if not supplier_dicts:
             logger.warning(f"Enrichment: no DISCOVERED suppliers found for brief {brief_id}, skipping")
             return
-        enriched = enrich_suppliers(supplier_dicts)
-        logger.info(f"Enrichment: enrich_suppliers returned {len(enriched)} results for brief {brief_id}")
+
+        total_enriched = 0
+        batch_size = 5  # Process 5 at a time to avoid timeout
+        for i in range(0, len(supplier_dicts), batch_size):
+            batch = supplier_dicts[i:i + batch_size]
+            logger.info(f"Enrichment: processing batch {i//batch_size + 1} ({len(batch)} suppliers) for brief {brief_id}")
+            enriched = enrich_suppliers(batch)
+            # Write batch to DB immediately
+            with get_db() as db:
+                for s in enriched:
+                    updates = {k: v for k, v in s.items() if k != "id" and v and k in schema_cols}
+                    if updates and "id" in s:
+                        set_clause = ",".join([f"{k}=?" for k in updates.keys()])
+                        vals = list(updates.values()) + [s["id"]]
+                        db.execute(f"UPDATE suppliers SET {set_clause} WHERE id=?", vals)
+                db.execute("UPDATE briefs SET status='ENRICHING', updated_at=? WHERE id=?",
+                          [datetime.utcnow().isoformat(), brief_id])
+            total_enriched += len(enriched)
+            logger.info(f"Enrichment: batch complete, {total_enriched} total enriched for brief {brief_id}")
+
+        # Final status update
         with get_db() as db:
-            for s in enriched:
-                updates = {k: v for k, v in s.items() if k != "id" and v and k in schema_cols}
-                if updates and "id" in s:
-                    set_clause = ",".join([f"{k}=?" for k in updates.keys()])
-                    vals = list(updates.values()) + [s["id"]]
-                    db.execute(f"UPDATE suppliers SET {set_clause} WHERE id=?", vals)
             db.execute("UPDATE briefs SET status='ENRICHED', updated_at=? WHERE id=?",
                       [datetime.utcnow().isoformat(), brief_id])
-        logger.info(f"Enrichment complete for brief {brief_id}: enriched {len(enriched)} suppliers")
+        logger.info(f"Enrichment complete for brief {brief_id}: enriched {total_enriched} suppliers")
         # Auto-chain: enrichment → outreach drafting
         logger.info(f"Auto-chaining outreach drafting for brief {brief_id}")
         run_outreach_drafts(brief_id)
