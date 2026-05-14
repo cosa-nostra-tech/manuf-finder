@@ -273,7 +273,9 @@ def run_discovery(brief_id: int):
                 logger.error(f"Brief {brief_id} not found")
                 return
             brief = dict(row)
+        logger.info(f"Discovery: loaded brief {brief_id} - {brief.get('product_name','?')}")
         results = discover_suppliers(brief)
+        logger.info(f"Discovery: discover_suppliers returned {len(results)} results for brief {brief_id}")
         # Insert discovered suppliers and link to brief
         with get_db() as db:
             linked = 0
@@ -488,6 +490,21 @@ def get_status():
 @app.get("/api/health")
 def health():
     return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
+
+@app.get("/api/debug/last-errors")
+def last_errors():
+    """Return last 20 log entries from the in-memory handler."""
+    from logging.handlers import MemoryHandler
+    # Just return recent DB state for debugging
+    with get_db() as db:
+        briefs = db.execute("SELECT id, product_name, status FROM briefs ORDER BY id DESC LIMIT 10").fetchall()
+        recent_suppliers = db.execute("SELECT id, trade_name, outreach_state, qualification_score, data_completeness_score FROM suppliers ORDER BY id DESC LIMIT 10").fetchall()
+        links = db.execute("SELECT brief_id, supplier_id, match_score FROM brief_suppliers ORDER BY rowid DESC LIMIT 20").fetchall()
+    return {
+        "briefs": [dict(r) for r in briefs],
+        "recent_suppliers": [dict(r) for r in recent_suppliers],
+        "recent_links": [dict(r) for r in links],
+    }
 
 # ─── Static files (dashboard) ─────────────────────────────────
 @app.get("/")
