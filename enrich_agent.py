@@ -570,10 +570,15 @@ def _extract_contact_person(text: str) -> Optional[str]:
                 while name_words and name_words[-1].lower().rstrip(".,:") in _CONTACT_TRAILING_STOPWORDS:
                     name_words.pop()
                 name = " ".join(name_words)
-                # Validate: ≤3 words after the title, 2-30 chars, no nav words
+                # Validate: ≤3 words after the title, 2-30 chars, no nav/company words
+                _company_words = {"co", "ltd", "llc", "inc", "gmbh", "trading",
+                                  "company", "export", "import", "group", "corp",
+                                  "enterprise", "industry", "industrial"}
+                name_words_lower = [w.lower().rstrip(".,:") for w in name_words]
                 if (2 <= len(name) <= 30
                         and len(name_words) <= 3
-                        and not any(w in name.lower() for w in ("home", "about", "product", "service", "blog"))):
+                        and not any(w in name.lower() for w in ("home", "about", "product", "service", "blog"))
+                        and not any(w in _company_words for w in name_words_lower)):
                     return re.sub(r"\s+", " ", f"{pattern} {name}").strip()
     return None
 
@@ -1495,8 +1500,10 @@ def _enrich_one(supplier: dict) -> dict:
     for key, value in enrich_fields.items():
         if value is not None and str(value).strip():
             existing = supplier.get(key)
-            # Don't overwrite if the field already has data
-            if existing is None or not str(existing).strip():
+            # Don't overwrite if the field already has data — but always overwrite scores
+            if key in ("qualification_score", "data_completeness_score"):
+                supplier[key] = value
+            elif existing is None or not str(existing).strip():
                 supplier[key] = value
 
     # Set outreach state
