@@ -180,7 +180,7 @@ def create_brief(brief: BriefCreate, background_tasks: BackgroundTasks):
         brief_id = cur.lastrowid
         row = db.execute("SELECT * FROM briefs WHERE id=?", [brief_id]).fetchone()
         # Auto-trigger discovery for all new briefs
-        background_tasks.add_task(run_discovery, brief_id)
+        background_tasks.add_task(run_research_agent, brief_id)
         return dict_from_row(row)
 
 @app.get("/api/briefs/{brief_id}")
@@ -449,10 +449,8 @@ def run_full_pipeline(brief_id: int, background_tasks: BackgroundTasks):
     return {"status": "pipeline_started", "brief_id": brief_id}
 
 def run_pipeline(brief_id: int):
-    """Run the full pipeline: discover → enrich → draft outreach."""
-    run_discovery(brief_id)
-    run_enrichment(brief_id)
-    run_outreach_drafts(brief_id)
+    """Run the full pipeline: research → draft outreach."""
+    run_research_agent(brief_id)
 
 # ─── Conversations / Approval ─────────────────────────────────
 @app.get("/api/conversations")
