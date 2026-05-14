@@ -574,11 +574,14 @@ def _extract_contact_person(text: str) -> Optional[str]:
                 _company_words = {"co", "ltd", "llc", "inc", "gmbh", "trading",
                                   "company", "export", "import", "group", "corp",
                                   "enterprise", "industry", "industrial"}
+                _cta_words = {"partner", "join", "subscribe", "contact", "inquiry",
+                              "enquiry", "collaborate", "cooperate", "connect"}
                 name_words_lower = [w.lower().rstrip(".,:") for w in name_words]
                 if (2 <= len(name) <= 30
                         and len(name_words) <= 3
                         and not any(w in name.lower() for w in ("home", "about", "product", "service", "blog"))
-                        and not any(w in _company_words for w in name_words_lower)):
+                        and not any(w in _company_words for w in name_words_lower)
+                        and not any(w in _cta_words for w in name_words_lower)):
                     return re.sub(r"\s+", " ", f"{pattern} {name}").strip()
     return None
 
