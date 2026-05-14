@@ -323,7 +323,7 @@ def run_research_agent(brief_id: int):
         script_path = os.path.join(os.path.dirname(__file__), "research_agent.py")
         result = subprocess.run(
             ["python3", script_path, "--brief-id", str(brief_id), "--max-suppliers", "20"],
-            capture_output=True, text=True, timeout=600, env=env,
+            capture_output=True, text=True, timeout=1200, env=env,
             cwd=os.path.dirname(__file__)
         )
         logger.info(f"Research agent finished for brief {brief_id}: exit={result.returncode}")

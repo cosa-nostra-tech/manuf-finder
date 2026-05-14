@@ -35,7 +35,7 @@ from ddgs import DDGS
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 STRATEGY_MODEL = os.environ.get("RESEARCH_STRATEGY_MODEL", "anthropic/claude-sonnet-4")
 EXTRACT_MODEL = os.environ.get("RESEARCH_EXTRACT_MODEL", "openai/gpt-4o-mini")
-MAX_ITERATIONS = int(os.environ.get("RESEARCH_MAX_ITERATIONS", "15"))
+MAX_ITERATIONS = int(os.environ.get("RESEARCH_MAX_ITERATIONS", "60"))
 MAX_SUPPLIERS = int(os.environ.get("RESEARCH_MAX_SUPPLIERS", "20"))
 
 # DB path — same as api.py: use relative path by default
