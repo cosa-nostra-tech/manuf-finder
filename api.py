@@ -267,17 +267,30 @@ def run_discovery(brief_id: int):
     logger.info(f"Discovery started for brief {brief_id}")
     try:
         from discovery_agent import discover_suppliers
-        with get_db() as db:
-            row = db.execute("SELECT * FROM briefs WHERE id=?", [brief_id]).fetchone()
-            if not row:
-                logger.error(f"Brief {brief_id} not found")
-                return
-            brief = dict(row)
+        # Read brief in a separate short-lived connection
+        import sqlite3 as _sq
+        _db_path = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "suppliers.db"))
+        _db = _sq.connect(_db_path, timeout=10)
+        _db.row_factory = _sq.Row
+        row = _db.execute("SELECT * FROM briefs WHERE id=?", [brief_id]).fetchone()
+        brief = dict(row) if row else None
+        _db.close()
+        if not brief:
+            logger.error(f"Brief {brief_id} not found")
+            return
         logger.info(f"Discovery: loaded brief {brief_id} - {brief.get('product_name','?')}")
         results = discover_suppliers(brief)
         logger.info(f"Discovery: discover_suppliers returned {len(results)} results for brief {brief_id}")
+        if not results:
+            logger.warning(f"Discovery: no results for brief {brief_id}")
+            with get_db() as db:
+                db.execute("UPDATE briefs SET status='DISCOVERY_FAILED', updated_at=? WHERE id=?",
+                          [datetime.utcnow().isoformat(), brief_id])
+            return
         # Insert discovered suppliers and link to brief
         with get_db() as db:
+            # Get valid column names for safety
+            schema_cols = {r[1] for r in db.execute("PRAGMA table_info(suppliers)").fetchall()}
             linked = 0
             for supplier in results:
                 # If this is a DB fallback match, we already know the supplier id
@@ -291,8 +304,9 @@ def run_discovery(brief_id: int):
                     if existing:
                         supplier_id = existing["id"]
                     else:
-                        # Insert new supplier
-                        cols = [k for k in supplier.keys() if k not in ("match_score", "existing_supplier_id")]
+                        # Insert new supplier — only valid schema columns
+                        skip_keys = ("match_score", "existing_supplier_id", "discovered_at")
+                        cols = [k for k in supplier.keys() if k in schema_cols and k not in skip_keys]
                         vals = [supplier[k] for k in cols]
                         placeholders = ",".join(["?"] * len(cols))
                         cur = db.execute(f"INSERT INTO suppliers ({','.join(cols)}) VALUES ({placeholders})", vals)
@@ -316,10 +330,14 @@ def run_discovery(brief_id: int):
             logger.info(f"Auto-chaining enrichment for brief {brief_id}")
             run_enrichment(brief_id)
     except Exception as e:
-        logger.error(f"Discovery failed for brief {brief_id}: {e}", exc_info=True)
-        with get_db() as db:
-            db.execute("UPDATE briefs SET status='DISCOVERY_FAILED', updated_at=? WHERE id=?",
-                      [datetime.utcnow().isoformat(), brief_id])
+        import traceback
+        logger.error(f"Discovery failed for brief {brief_id}: {e}\n{traceback.format_exc()}")
+        try:
+            with get_db() as db:
+                db.execute("UPDATE briefs SET status='DISCOVERY_FAILED', updated_at=? WHERE id=?",
+                          [datetime.utcnow().isoformat(), brief_id])
+        except Exception:
+            pass
 
 # ─── Enrichment (agent-triggered) ────────────────────────────
 @app.post("/api/briefs/{brief_id}/enrich")
