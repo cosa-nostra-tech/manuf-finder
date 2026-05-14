@@ -537,6 +537,31 @@ def last_errors():
         "recent_links": [dict(r) for r in links],
     }
 
+@app.get("/api/debug/enrich/{brief_id}")
+def debug_enrich(brief_id: int):
+    """Synchronous enrichment for debugging — returns result or error directly."""
+    try:
+        from enrich_agent import enrich_suppliers
+        with get_db() as db:
+            schema_cols = {r[1] for r in db.execute("PRAGMA table_info(suppliers)").fetchall()}
+            suppliers = db.execute("""
+                SELECT s.* FROM suppliers s
+                JOIN brief_suppliers bs ON s.id = bs.supplier_id
+                WHERE bs.brief_id=? AND s.outreach_state='DISCOVERED'
+            """, [brief_id]).fetchall()
+            supplier_dicts = dict_list_from_rows(suppliers)
+        if not supplier_dicts:
+            return {"error": "No DISCOVERED suppliers found", "brief_id": brief_id}
+        # Only enrich first 2 for speed
+        enriched = enrich_suppliers(supplier_dicts[:2])
+        results = []
+        for s in enriched:
+            results.append({k: s.get(k) for k in ["trade_name","legal_name","email","contact_name","moq","qualification_score","data_completeness_score","outreach_state"]})
+        return {"success": True, "count": len(enriched), "results": results}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
+
 # ─── Static files (dashboard) ─────────────────────────────────
 @app.get("/")
 def serve_dashboard():
