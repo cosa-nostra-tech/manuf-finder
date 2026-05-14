@@ -1317,6 +1317,81 @@ def _calc_completeness_score(sr: ScrapeResult) -> int:
 # Core enrichment pipeline
 # ---------------------------------------------------------------------------
 
+def _calc_qualification_score(sr: "ScrapeResult") -> int:
+    """Compute a 0-100 qualification score based on enrichment data."""
+    score = 0
+    # Legal name
+    if sr.legal_name and len(sr.legal_name.strip()) > 3:
+        score += 15
+    # Email
+    if sr.email and "@" in sr.email:
+        score += 10
+    # Contact person
+    if sr.contact_name and len(sr.contact_name.strip()) > 2:
+        score += 10
+    # WeChat
+    if sr.wechat_id and len(sr.wechat_id.strip()) > 2:
+        score += 5
+    # Certifications (0→0, 1-2→10, 3-4→15, 5+→20)
+    certs = sr.certs_and_audits.split(";") if sr.certs_and_audits else []
+    certs = [c.strip() for c in certs if c.strip()]
+    if len(certs) >= 5:
+        score += 20
+    elif len(certs) >= 3:
+        score += 15
+    elif len(certs) >= 1:
+        score += 10
+    # Factory locations
+    if sr.factory_locations and len(sr.factory_locations.strip()) > 2:
+        score += 10
+    # MOQ
+    if sr.moq and len(str(sr.moq).strip()) > 0:
+        score += 10
+    # Brands worked with
+    if sr.brands_worked_with and len(sr.brands_worked_with.strip()) > 2:
+        score += 10
+    # Supplier type
+    if sr.supplier_type:
+        if "Manufacturer" in sr.supplier_type:
+            score += 10
+        elif "Trading" in sr.supplier_type:
+            score += 5
+    # Founded >10 years
+    if sr.founding_year:
+        try:
+            years = 2026 - int(sr.founding_year)
+            if years > 10:
+                score += 5
+        except (ValueError, TypeError):
+            pass
+    # Platform verified
+    if sr.platform_verified:
+        score += 5
+    return min(score, 100)
+
+
+def _calc_completeness_score(sr: "ScrapeResult") -> int:
+    """Compute a 0-100 data completeness score."""
+    key_fields = [
+        sr.legal_name,
+        sr.email,
+        sr.contact_name,
+        sr.wechat_id,
+        sr.factory_locations,
+        sr.certs_and_audits,
+        sr.moq,
+        sr.brands_worked_with,
+        sr.supplier_type,
+        sr.product_categories,
+        sr.market_experience,
+        sr.founding_year,
+        sr.supplier_subtype,
+        sr.company_description,
+    ]
+    filled = sum(1 for f in key_fields if f and str(f).strip())
+    return round((filled / len(key_fields)) * 100)
+
+
 def _enrich_one(supplier: dict) -> dict:
     """Deep-enrich a single supplier record."""
     trade_name = supplier.get("trade_name") or supplier.get("legal_name") or ""
