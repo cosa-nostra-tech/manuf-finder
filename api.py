@@ -252,102 +252,83 @@ def update_supplier(supplier_id: int, updates: dict):
         row = db.execute("SELECT * FROM suppliers WHERE id=?", [supplier_id]).fetchone()
         return dict_from_row(row)
 
-# ─── Discovery (agent-triggered) ─────────────────────────────
+# ─── Research (agent-triggered) ──────────────────────────────
 @app.post("/api/briefs/{brief_id}/discover")
 def trigger_discovery(brief_id: int, background_tasks: BackgroundTasks):
     with get_db() as db:
         row = db.execute("SELECT * FROM briefs WHERE id=?", [brief_id]).fetchone()
         if not row:
             raise HTTPException(404, "Brief not found")
-    background_tasks.add_task(run_discovery, brief_id)
-    return {"status": "discovery_started", "brief_id": brief_id}
+    # Launch research agent as a subprocess (avoids Railway background task timeout)
+    background_tasks.add_task(run_research_agent, brief_id)
+    return {"status": "research_started", "brief_id": brief_id}
 
-def run_discovery(brief_id: int):
-    """Background task: discover suppliers matching a brief via web search + DB fallback."""
-    logger.info(f"Discovery started for brief {brief_id}")
-    try:
-        from discovery_agent import discover_suppliers
-        # Read brief in a separate short-lived connection
-        import sqlite3 as _sq
-        _db_path = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "suppliers.db"))
-        _db = _sq.connect(_db_path, timeout=10)
-        _db.row_factory = _sq.Row
-        row = _db.execute("SELECT * FROM briefs WHERE id=?", [brief_id]).fetchone()
-        brief = dict(row) if row else None
-        _db.close()
-        if not brief:
-            logger.error(f"Brief {brief_id} not found")
-            return
-        logger.info(f"Discovery: loaded brief {brief_id} - {brief.get('product_name','?')}")
-        results = discover_suppliers(brief)
-        logger.info(f"Discovery: discover_suppliers returned {len(results)} results for brief {brief_id}")
-        if not results:
-            logger.warning(f"Discovery: no results for brief {brief_id}")
-            with get_db() as db:
-                db.execute("UPDATE briefs SET status='DISCOVERY_FAILED', updated_at=? WHERE id=?",
-                          [datetime.utcnow().isoformat(), brief_id])
-            return
-        # Insert discovered suppliers and link to brief
-        with get_db() as db:
-            # Get valid column names for safety
-            schema_cols = {r[1] for r in db.execute("PRAGMA table_info(suppliers)").fetchall()}
-            linked = 0
-            for supplier in results:
-                # If this is a DB fallback match, we already know the supplier id
-                existing_id = supplier.get("existing_supplier_id")
-                if existing_id:
-                    supplier_id = existing_id
-                else:
-                    # Check if supplier already exists by trade_name
-                    existing = db.execute("SELECT id FROM suppliers WHERE trade_name=?",
-                                         [supplier.get("trade_name")]).fetchone()
-                    if existing:
-                        supplier_id = existing["id"]
-                    else:
-                        # Insert new supplier — only valid schema columns
-                        skip_keys = ("match_score", "existing_supplier_id", "discovered_at")
-                        cols = [k for k in supplier.keys() if k in schema_cols and k not in skip_keys]
-                        vals = [supplier[k] for k in cols]
-                        placeholders = ",".join(["?"] * len(cols))
-                        cur = db.execute(f"INSERT INTO suppliers ({','.join(cols)}) VALUES ({placeholders})", vals)
-                        supplier_id = cur.lastrowid
-                # Link to brief (upsert)
-                match_score = supplier.get("match_score", 0)
-                try:
-                    db.execute("INSERT INTO brief_suppliers (brief_id, supplier_id, match_score) VALUES (?,?,?)",
-                              [brief_id, supplier_id, match_score])
-                    linked += 1
-                except sqlite3.IntegrityError:
-                    db.execute("UPDATE brief_suppliers SET match_score=? WHERE brief_id=? AND supplier_id=?",
-                              [match_score, brief_id, supplier_id])
-            # Update brief status
-            status = "DISCOVERED" if linked > 0 else "DISCOVERY_FAILED"
-            db.execute("UPDATE briefs SET status=?, updated_at=? WHERE id=?",
-                      [status, datetime.utcnow().isoformat(), brief_id])
-        logger.info(f"Discovery complete for brief {brief_id}: linked {linked} suppliers")
-        # Auto-chain: discovery → enrichment → outreach
-        if linked > 0:
-            logger.info(f"Auto-chaining enrichment for brief {brief_id}")
-            run_enrichment(brief_id)
-    except Exception as e:
-        import traceback
-        logger.error(f"Discovery failed for brief {brief_id}: {e}\n{traceback.format_exc()}")
-        try:
-            with get_db() as db:
-                db.execute("UPDATE briefs SET status='DISCOVERY_FAILED', updated_at=? WHERE id=?",
-                          [datetime.utcnow().isoformat(), brief_id])
-        except Exception:
-            pass
-
-# ─── Enrichment (agent-triggered) ────────────────────────────
 @app.post("/api/briefs/{brief_id}/enrich")
 def trigger_enrichment(brief_id: int, background_tasks: BackgroundTasks):
+    """Enrichment is now handled by the research agent. This endpoint kept for API compat."""
     with get_db() as db:
         row = db.execute("SELECT * FROM briefs WHERE id=?", [brief_id]).fetchone()
         if not row:
             raise HTTPException(404, "Brief not found")
-    background_tasks.add_task(run_enrichment, brief_id)
-    return {"status": "enrichment_started", "brief_id": brief_id}
+    background_tasks.add_task(run_research_agent, brief_id)
+    return {"status": "research_started", "brief_id": brief_id}
+
+def run_research_agent(brief_id: int):
+    """Launch research_agent.py as a subprocess — avoids FastAPI background task timeouts."""
+    import subprocess
+    logger.info(f"Launching research agent subprocess for brief {brief_id}")
+    try:
+        # Set OPENROUTER_API_KEY in the subprocess env
+        env = os.environ.copy()
+        # Try to load from .hermes/.env if not already set
+        if not env.get("OPENROUTER_API_KEY"):
+            dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".hermes", ".env")
+            if os.path.exists(dotenv_path):
+                with open(dotenv_path) as f:
+                    for line in f:
+                        if line.strip().startswith("OPENROUTER_API_KEY="):
+                            env["OPENROUTER_API_KEY"] = line.strip().split("=", 1)[1]
+                            break
+
+        with get_db() as db:
+            db.execute("UPDATE briefs SET status='RESEARCHING', updated_at=? WHERE id=?",
+                      [datetime.utcnow().isoformat(), brief_id])
+
+        script_path = os.path.join(os.path.dirname(__file__), "research_agent.py")
+        result = subprocess.run(
+            ["python3", script_path, "--brief-id", str(brief_id), "--max-suppliers", "20"],
+            capture_output=True, text=True, timeout=600, env=env,
+            cwd=os.path.dirname(__file__)
+        )
+        logger.info(f"Research agent finished for brief {brief_id}: exit={result.returncode}")
+        if result.stdout:
+            logger.info(f"Research agent stdout: {result.stdout[:500]}")
+        if result.stderr:
+            logger.warning(f"Research agent stderr: {result.stderr[:500]}")
+        if result.returncode != 0:
+            with get_db() as db:
+                db.execute("UPDATE briefs SET status='RESEARCH_FAILED', updated_at=? WHERE id=?",
+                          [datetime.utcnow().isoformat(), brief_id])
+        else:
+            # Auto-chain: research → outreach drafting
+            logger.info(f"Research agent succeeded for brief {brief_id}, auto-chaining outreach")
+            run_outreach_drafts(brief_id)
+    except subprocess.TimeoutExpired:
+        logger.error(f"Research agent timed out for brief {brief_id}")
+        try:
+            with get_db() as db:
+                db.execute("UPDATE briefs SET status='RESEARCH_FAILED', updated_at=? WHERE id=?",
+                          [datetime.utcnow().isoformat(), brief_id])
+        except Exception:
+            pass
+    except Exception as e:
+        logger.error(f"Research agent failed for brief {brief_id}: {e}")
+        try:
+            with get_db() as db:
+                db.execute("UPDATE briefs SET status='RESEARCH_FAILED', updated_at=? WHERE id=?",
+                          [datetime.utcnow().isoformat(), brief_id])
+        except Exception:
+            pass
 
 def run_enrichment(brief_id: int):
     """Background task: enrich discovered suppliers with detailed data.
