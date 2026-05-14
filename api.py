@@ -280,15 +280,41 @@ def run_research_agent(brief_id: int):
     try:
         # Set OPENROUTER_API_KEY in the subprocess env
         env = os.environ.copy()
-        # Try to load from .hermes/.env if not already set
+        # Try multiple sources for the API key
         if not env.get("OPENROUTER_API_KEY"):
-            dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".hermes", ".env")
+            # 1. Check .env in project dir
+            dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
             if os.path.exists(dotenv_path):
                 with open(dotenv_path) as f:
                     for line in f:
                         if line.strip().startswith("OPENROUTER_API_KEY="):
                             env["OPENROUTER_API_KEY"] = line.strip().split("=", 1)[1]
                             break
+            # 2. Check parent .hermes/.env
+            if not env.get("OPENROUTER_API_KEY"):
+                dotenv_path = os.path.join(os.path.dirname(__file__), "..", ".hermes", ".env")
+                if os.path.exists(dotenv_path):
+                    with open(dotenv_path) as f:
+                        for line in f:
+                            if line.strip().startswith("OPENROUTER_API_KEY="):
+                                env["OPENROUTER_API_KEY"] = line.strip().split("=", 1)[1]
+                                break
+            # 3. Check /data/.hermes/.env (Hermes container)
+            if not env.get("OPENROUTER_API_KEY"):
+                dotenv_path = "/data/.hermes/.env"
+                if os.path.exists(dotenv_path):
+                    with open(dotenv_path) as f:
+                        for line in f:
+                            if line.strip().startswith("OPENROUTER_API_KEY="):
+                                env["OPENROUTER_API_KEY"] = line.strip().split("=", 1)[1]
+                                break
+
+        if not env.get("OPENROUTER_API_KEY"):
+            logger.error(f"OPENROUTER_API_KEY not found — research agent cannot run")
+            with get_db() as db:
+                db.execute("UPDATE briefs SET status='RESEARCH_FAILED', updated_at=? WHERE id=?",
+                          [datetime.utcnow().isoformat(), brief_id])
+            return
 
         with get_db() as db:
             db.execute("UPDATE briefs SET status='RESEARCHING', updated_at=? WHERE id=?",
