@@ -354,6 +354,7 @@ def run_enrichment(brief_id: int):
     logger.info(f"Enrichment started for brief {brief_id}")
     try:
         from enrich_agent import enrich_suppliers
+        logger.info(f"Enrichment: enrich_agent imported OK for brief {brief_id}")
         # Get valid column names from DB schema
         with get_db() as db:
             schema_cols = {r[1] for r in db.execute("PRAGMA table_info(suppliers)").fetchall()}
@@ -363,7 +364,12 @@ def run_enrichment(brief_id: int):
                 WHERE bs.brief_id=? AND s.outreach_state='DISCOVERED'
             """, [brief_id]).fetchall()
             supplier_dicts = dict_list_from_rows(suppliers)
+        logger.info(f"Enrichment: found {len(supplier_dicts)} DISCOVERED suppliers for brief {brief_id}")
+        if not supplier_dicts:
+            logger.warning(f"Enrichment: no DISCOVERED suppliers found for brief {brief_id}, skipping")
+            return
         enriched = enrich_suppliers(supplier_dicts)
+        logger.info(f"Enrichment: enrich_suppliers returned {len(enriched)} results for brief {brief_id}")
         with get_db() as db:
             for s in enriched:
                 updates = {k: v for k, v in s.items() if k != "id" and v and k in schema_cols}
@@ -378,7 +384,14 @@ def run_enrichment(brief_id: int):
         logger.info(f"Auto-chaining outreach drafting for brief {brief_id}")
         run_outreach_drafts(brief_id)
     except Exception as e:
-        logger.error(f"Enrichment failed for brief {brief_id}: {e}")
+        import traceback
+        logger.error(f"Enrichment failed for brief {brief_id}: {e}\n{traceback.format_exc()}")
+        try:
+            with get_db() as db:
+                db.execute("UPDATE briefs SET status='ENRICHMENT_FAILED', updated_at=? WHERE id=?",
+                          [datetime.utcnow().isoformat(), brief_id])
+        except Exception:
+            pass
 
 # ─── Outreach ─────────────────────────────────────────────────
 @app.post("/api/briefs/{brief_id}/draft-outreach")
