@@ -35,7 +35,7 @@ from ddgs import DDGS
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 STRATEGY_MODEL = os.environ.get("RESEARCH_STRATEGY_MODEL", "anthropic/claude-sonnet-4")
 EXTRACT_MODEL = os.environ.get("RESEARCH_EXTRACT_MODEL", "openai/gpt-4o-mini")
-MAX_ITERATIONS = int(os.environ.get("RESEARCH_MAX_ITERATIONS", "60"))
+MAX_ITERATIONS = int(os.environ.get("RESEARCH_MAX_ITERATIONS", "80"))
 MAX_SUPPLIERS = int(os.environ.get("RESEARCH_MAX_SUPPLIERS", "20"))
 
 # DB path — same as api.py: use relative path by default
@@ -284,6 +284,62 @@ def update_brief_status(brief_id: int, status: str):
         )
 
 
+def search_bol(company_name: str) -> list[dict]:
+    """Search bill of lading / US customs import records for a supplier to find their brand clients (consignees)."""
+    results = []
+    
+    # Strategy 1: Search 52wmb.com (works well for Chinese exporters)
+    try:
+        search_results = web_search(f'site:en.52wmb.com "{company_name}"', max_results=3)
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+        
+        for sr in search_results:
+            m = re.search(r'en\.52wmb\.com/supplier/(\d+)', sr.get('url', sr.get('href', '')))
+            if not m:
+                continue
+            supplier_id = m.group(1)
+            try:
+                resp = httpx.get(f'https://en.52wmb.com/supplier/{supplier_id}', headers=headers, follow_redirects=True, timeout=12)
+                if resp.status_code == 200:
+                    # Extract buyer/consignee names from the page
+                    buyers = re.findall(r'href="/buyer/\d+"[^>]*title="([^"]+)"', resp.text)
+                    if not buyers:
+                        buyers = re.findall(r'href="/buyer/\d+"[^>]*>([^<]+)', resp.text)
+                    for b in buyers[:10]:
+                        b = b.strip()
+                        if b and len(b) > 3:
+                            results.append({"name": b, "source": "52wmb", "type": "consignee"})
+                    break  # Found the page, no need to check more search results
+            except Exception:
+                continue
+    except Exception as e:
+        logger.debug(f"52wmb search failed for {company_name}: {e}")
+    
+    # Strategy 2: Search DDG for bill of lading data
+    try:
+        bol_results = web_search(f'"{company_name}" "bill of lading" OR "customs" OR "import records" OR importer', max_results=5)
+        for r in bol_results:
+            snippet = r.get('snippet', r.get('body', ''))
+            # Extract company-like names from snippets (capitalized words)
+            consignees = re.findall(r'([A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+)*(?:\s(?:Inc|LLC|Ltd|Co|Corp|Brands?))?)', snippet)
+            for c in consignees[:5]:
+                if c.lower() not in company_name.lower() and len(c) > 4:
+                    results.append({"name": c, "source": "search_snippet", "type": "potential_buyer"})
+    except Exception as e:
+        logger.debug(f"BOL web search failed for {company_name}: {e}")
+    
+    # Deduplicate
+    seen = set()
+    unique = []
+    for r in results:
+        key = r["name"].lower().strip()
+        if key not in seen and key not in company_name.lower():
+            seen.add(key)
+            unique.append(r)
+    
+    return unique[:15]
+
+
 def get_existing_supplier_names() -> set[str]:
     """Get all existing supplier trade names to avoid duplicates."""
     with get_db() as db:
@@ -298,15 +354,17 @@ STRATEGY_SYSTEM_PROMPT = """You are a supplier research agent for Atelier, a pro
 You have these tools:
 - search(query): Search DuckDuckGo. Returns list of {title, url, snippet}.
 - scrape(url): Scrape a webpage and return its text content.
+- search_bol(company_name): Search bill of lading / US customs import records to find which brands/buyers a supplier ships to. Returns list of consignee names from real shipment records. Use this AFTER finding a supplier to discover their brand clients.
 - save(supplier_data): Save a discovered supplier. supplier_data must be a JSON object with at least "trade_name". Prefer full data: trade_name, legal_name, website, email, contact_name, wechat_id, moq, factory_locations, supplier_type, product_categories, certs_and_audits, brands_worked_with, market_experience.
 
 RESEARCH STRATEGY:
 1. Start with 2-3 targeted search queries (e.g. "[product] manufacturer China OEM", "[product] supplier factory wholesale")
 2. Evaluate search results — identify which are REAL suppliers vs blog articles/listicles/SEO spam
 3. For each real supplier result, scrape their website to extract structured data
-4. If a website is empty/minimal (JS-rendered), try cross-referencing on Alibaba: search "[company name] Alibaba" or "[company name] made-in-china"
-5. Try at least 3 different search query angles to find diverse suppliers
-6. Don't waste time on directory/listicle sites — skip them and search differently
+4. After saving each supplier, use search_bol to find their bill of lading data — this reveals which BRANDS they actually manufacture for (their consignees/importers in US customs records). This is critical for the brands_worked_with field.
+5. If a website is empty/minimal (JS-rendered), try cross-referencing on Alibaba: search "[company name] Alibaba" or "[company name] made-in-china"
+6. Try at least 3 different search query angles to find diverse suppliers
+7. Don't waste time on directory/listicle sites — skip them and search differently
 
 QUALITY RULES:
 - ONLY save REAL suppliers (companies that manufacture or supply the product)
@@ -315,13 +373,15 @@ QUALITY RULES:
 - Each supplier must have a real website URL
 - Prefer suppliers with actual contact info (email, WeChat, phone)
 - Aim for 15-20 suppliers per brief
+- The brands_worked_with field is HIGH VALUE — use search_bol to find real US customs import records showing which brands buy from this supplier. Even 1-2 verified brand relationships are more valuable than guessed ones.
 
 Respond with ONE action per message in this format:
-ACTION: search|scrape|save
+ACTION: search|scrape|search_bol|save
 PARAMS: <json or value>
 
 For search: PARAMS: {"query": "your search query"}
 For scrape: PARAMS: "https://example.com"
+For search_bol: PARAMS: "Company Name" (searches bill of lading / customs records for this supplier's brand clients)
 For save: PARAMS: {"trade_name": "...", "legal_name": "...", ...}
 For done: ACTION: done
 PARAMS: {"suppliers_found": N, "summary": "brief summary"}"""
@@ -451,6 +511,32 @@ Target: Find {max_suppliers} real suppliers. Currently found: {saved_count}/{max
 
             except json.JSONDecodeError:
                 messages.append({"role": "user", "content": f"ERROR: Invalid JSON in params: {params}. Use format: {{\"query\": \"...\"}}"})
+
+        elif action == "search_bol":
+            company = params.strip().strip('"').strip("'")
+            if not company:
+                messages.append({"role": "user", "content": "ERROR: company_name is required for search_bol. Use format: search_bol\nPARAMS: Company Name"})
+                continue
+            
+            logger.info(f"  Searching BOL for: {company}")
+            bol_results = search_bol(company)
+            
+            if bol_results:
+                # Format results for the LLM
+                buyers_text = "\n".join(
+                    f"- {r['name']} ({r['type']}, source: {r['source']})"
+                    for r in bol_results
+                )
+                messages.append({
+                    "role": "user",
+                    "content": f"Bill of lading / customs records for '{company}':\n{buyers_text}\n\nThese are real US customs consignees who imported goods from this supplier. Use these to populate the brands_worked_with field when saving this supplier. Focus on recognizable brand names or larger importers — small trading companies may not be worth listing."
+                })
+            else:
+                messages.append({
+                    "role": "user",
+                    "content": f"No bill of lading data found for '{company}'. Try a variant of the name or skip — you can still save the supplier without BOL data."
+                })
+            time.sleep(1)  # Rate limit BOL searches
 
         elif action == "scrape":
             url = params.strip().strip('"').strip("'")
@@ -610,7 +696,7 @@ Target: Find {max_suppliers} real suppliers. Currently found: {saved_count}/{max
                 messages.append({"role": "user", "content": f"ERROR: Invalid JSON: {params}"})
 
         else:
-            messages.append({"role": "user", "content": f"Unknown action '{action}'. Use: search, scrape, save, or done."})
+            messages.append({"role": "user", "content": f"Unknown action '{action}'. Use: search, search_bol, scrape, save, or done."})
 
     # Final status
     if saved_count >= max_suppliers:
