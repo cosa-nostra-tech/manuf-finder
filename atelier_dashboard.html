@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atelier — Agentic Growth System</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#ffffff;--surface:#000000;--surface2:#111111;--surface3:#1a1a1a;
+  --border:rgba(255,255,255,.12);--border-dark:rgba(0,0,0,.08);
+  --text:#ffffff;--text2:rgba(255,255,255,.6);--text3:rgba(255,255,255,.4);
+  --text-dark:#000000;--text-dark2:rgba(0,0,0,.55);
+  --pill-border:rgba(255,255,255,.25);
+  --blue:#3b82f6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--purple:#a855f7;--cyan:#06b6d4;
+}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text-dark);overflow-x:hidden}
+
+/* ===== LANDING VIEW ===== */
+.landing{padding:48px 56px;min-height:100vh}
+.landing-header{margin-bottom:48px}
+.landing-title{font-size:28px;font-weight:800;letter-spacing:-.5px;line-height:1.2}
+.landing-subtitle{font-size:13px;color:var(--text-dark2);margin-top:8px;font-weight:400}
+.landing-section-label{font-size:14px;font-weight:700;margin-bottom:24px;letter-spacing:-.2px}
+
+/* Capability Cards */
+.capability-grid{display:flex;flex-direction:column;gap:20px;max-width:420px}
+.capability-card{border-radius:16px;overflow:hidden;cursor:pointer;transition:all .25s;border:1px solid var(--border-dark)}
+.capability-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.12)}
+.capability-card:active{transform:translateY(-1px)}
+.card-image{width:100%;height:200px;object-fit:cover;display:block;background:#f0f0f0}
+.card-body{background:var(--surface);padding:20px 22px 22px}
+.card-pill{display:inline-block;font-size:11px;font-weight:500;padding:5px 12px;border-radius:20px;border:1px solid var(--pill-border);color:var(--text);margin-bottom:12px}
+.card-pill .pill-num{font-weight:700}
+.card-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;letter-spacing:-.3px}
+.card-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px}
+.card-cta{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.2px}
+
+/* Status dots on pills */
+.pill-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.pill-dot.active{background:var(--green);box-shadow:0 0 6px var(--green)}
+.pill-dot.draft{background:var(--amber)}
+
+/* New Capability Card */
+.new-capability-card{border-radius:16px;border:2px dashed rgba(0,0,0,.15);padding:48px 32px;text-align:center;cursor:pointer;transition:all .2s;max-width:420px}
+.new-capability-card:hover{border-color:rgba(0,0,0,.3);background:rgba(0,0,0,.02)}
+.new-capability-card .plus{font-size:32px;color:rgba(0,0,0,.2);margin-bottom:8px}
+.new-capability-card .label{font-size:13px;font-weight:600;color:var(--text-dark2)}
+
+/* ===== FLOW VIEW (Pipeline/Funnel/Conversations) ===== */
+.flow-view{display:none;min-height:100vh}
+.flow-view.active{display:block}
+
+/* Flow Header */
+.flow-header{padding:20px 56px;border-bottom:1px solid var(--border-dark);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);z-index:100}
+.flow-back{font-size:12px;font-weight:600;cursor:pointer;color:var(--text-dark2);display:flex;align-items:center;gap:6px;transition:color .15s;border:none;background:none;padding:0}
+.flow-back:hover{color:var(--text-dark)}
+.flow-title{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.flow-actions{display:flex;gap:8px}
+.flow-btn{padding:7px 14px;border-radius:8px;border:1px solid var(--border-dark);background:transparent;color:var(--text-dark);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.flow-btn:hover{background:rgba(0,0,0,.04)}
+.flow-btn.primary{background:var(--text-dark);color:var(--bg);border-color:var(--text-dark)}
+.flow-btn.primary:hover{opacity:.85}
+
+/* Metrics Strip */
+.metrics-strip{display:flex;gap:14px;padding:16px 56px;border-bottom:1px solid var(--border-dark);overflow-x:auto}
+.ms-item{min-width:110px;flex-shrink:0}
+.ms-label{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dark2);margin-bottom:2px}
+.ms-value{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.ms-sub{font-size:10px;color:var(--text-dark2)}
+
+/* View Tabs */
+.view-tabs{display:flex;gap:0;padding:0 56px;border-bottom:1px solid var(--border-dark)}
+.vt{padding:10px 18px;font-size:11px;font-weight:600;color:var(--text-dark2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.vt:hover{color:var(--text-dark)}
+.vt.active{color:var(--text-dark);border-bottom-color:var(--text-dark)}
+
+/* ===== PIPELINE ===== */
+.pipeline-wrap{display:flex;gap:14px;padding:16px 56px;overflow-x:auto;min-height:calc(100vh - 200px)}
+.p-col{min-width:220px;max-width:260px;flex:1;display:flex;flex-direction:column}
+.p-col-head{padding:10px 14px;font-size:11px;font-weight:700;display:flex;justify-content:space-between;align-items:center;border-radius:10px 10px 0 0}
+.p-col-count{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.06)}
+.p-col-cards{flex:1;padding:8px 0;display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:calc(100vh - 280px)}
+.p-card{background:#fafafa;border:1px solid var(--border-dark);border-radius:10px;padding:12px;cursor:pointer;transition:all .15s}
+.p-card:hover{border-color:rgba(0,0,0,.2);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.p-card-name{font-size:12px;font-weight:700;margin-bottom:4px}
+.p-card-meta{font-size:10px;color:var(--text-dark2);display:flex;gap:8px}
+.p-card-scores{display:flex;gap:8px;margin-top:8px}
+.p-card-bar{flex:1;height:3px;border-radius:2px;background:rgba(0,0,0,.06);overflow:hidden}
+.p-card-fill{height:100%;border-radius:2px}
+.p-card-chip{font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.05);color:var(--text-dark2);margin-top:6px;display:inline-block}
+
+/* ===== FUNNEL ===== */
+.funnel-wrap{padding:32px 56px;display:flex;flex-direction:column;align-items:center;min-height:calc(100vh - 200px)}
+.f-stage{display:flex;align-items:center;margin:4px 0;cursor:pointer;transition:all .2s}
+.f-stage:hover{transform:scale(1.02)}
+.f-bar{height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;transition:width .4s;min-width:100px}
+.f-info{margin-left:16px}
+.f-label{font-size:12px;font-weight:700}
+.f-drop{font-size:10px;color:var(--text-dark2)}
+
+/* ===== WORKFLOW ===== */
+.workflow-wrap{padding:32px 56px;display:flex;justify-content:center;min-height:calc(100vh - 200px)}
+.wf-chart{display:flex;flex-direction:column;align-items:center;gap:0}
+.wf-phase{width:260px;border:2px solid var(--border-dark);border-radius:14px;padding:16px;cursor:pointer;transition:all .2s;background:#fafafa}
+.wf-phase:hover{border-color:rgba(0,0,0,.3);background:#f5f5f5}
+.wf-phase-title{font-size:13px;font-weight:800;margin-bottom:6px}
+.wf-phase-steps{font-size:11px;color:var(--text-dark2);line-height:1.7}
+.wf-phase-steps li{margin-left:14px}
+.wf-arrow{font-size:18px;color:rgba(0,0,0,.2);padding:4px 0}
+
+/* ===== TABLE ===== */
+.table-wrap{padding:16px 56px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:8px 12px;text-align:left;border-bottom:2px solid var(--border-dark);font-size:9px;text-transform:uppercase;letter-spacing:.6px;font-weight:700;color:var(--text-dark2);position:sticky;top:0;background:var(--bg)}
+td{padding:8px 12px;border-bottom:1px solid var(--border-dark)}
+tr:hover td{background:rgba(0,0,0,.015)}
+tr{cursor:pointer}
+.cert-tag{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600}
+.cert-v{background:rgba(34,197,94,.1);color:#16a34a}
+.cert-c{background:rgba(245,158,11,.1);color:#d97706}
+.cert-u{background:rgba(239,68,68,.06);color:#dc2626}
+
+/* ===== MODAL ===== */
+.modal-bg{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:none;z-index:300;justify-content:center;align-items:center}
+.modal-bg.show{display:flex}
+.modal-box{background:var(--bg);border-radius:16px;width:92%;max-width:760px;max-height:90vh;overflow-y:auto;scrollbar-width:thin}
+.modal-box::-webkit-scrollbar{width:5px}
+.modal-box::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:5px}
+.modal-top{padding:18px 22px;border-bottom:1px solid var(--border-dark);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg);z-index:1}
+.modal-top h2{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.modal-x{background:none;border:none;font-size:18px;color:var(--text-dark2);cursor:pointer}
+.modal-inner{padding:22px}
+.m-section{margin-bottom:18px}
+.m-section h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-dark2);margin-bottom:10px}
+.m-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m-field-label{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dark2);margin-bottom:1px}
+.m-field-value{font-size:12px;font-weight:500}
+.m-field-value.empty{color:rgba(0,0,0,.3);font-style:italic}
+
+/* State buttons */
+.action-row{display:flex;flex-wrap:wrap;gap:6px}
+.act-btn{padding:8px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid var(--border-dark);background:transparent}
+.act-btn:hover{background:rgba(0,0,0,.04)}
+.act-btn.go{background:#000;color:#fff;border-color:#000}
+.act-btn.go:hover{opacity:.85}
+.act-btn.stop{color:#dc2626;border-color:rgba(220,38,38,.3)}
+.act-btn.wait{color:#d97706;border-color:rgba(217,124,6,.3)}
+
+/* ===== CONVERSATION ===== */
+.conv-box{margin-top:10px;border:1px solid var(--border-dark);border-radius:12px;overflow:hidden;background:#fafafa}
+.conv-head{padding:10px 14px;border-bottom:1px solid var(--border-dark);display:flex;justify-content:space-between;align-items:center;background:var(--bg)}
+.conv-head-title{font-size:11px;font-weight:600;color:var(--text-dark2)}
+.conv-chip{font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(0,0,0,.04);color:var(--text-dark2)}
+.conv-body{padding:14px;max-height:340px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.1) transparent;background:var(--bg)}
+.conv-body::-webkit-scrollbar{width:3px}
+.conv-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:3px}
+.c-msg{display:flex;gap:8px;margin-bottom:12px;align-items:flex-start}
+.c-msg.out{flex-direction:row-reverse}
+.c-av{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.c-msg.out .c-av{background:rgba(0,0,0,.06)}
+.c-msg.in .c-av{background:rgba(0,0,0,.03)}
+.c-bubble{max-width:76%;padding:8px 12px;border-radius:10px;font-size:11px;line-height:1.5;word-break:break-word}
+.c-msg.out .c-bubble{background:var(--surface);color:var(--text)}
+.c-msg.in .c-bubble{background:rgba(0,0,0,.03);border:1px solid var(--border-dark)}
+.c-meta{display:flex;justify-content:space-between;align-items:center;margin-top:2px}
+.c-time{font-size:9px;color:var(--text-dark2)}
+.c-act{font-size:8px;padding:1px 5px;border-radius:3px;background:rgba(0,0,0,.05);font-weight:600}
+
+/* Translation */
+.tr-toggle{font-size:9px;padding:3px 9px;border-radius:4px;border:1px solid rgba(0,0,0,.1);background:transparent;color:var(--text-dark2);cursor:pointer;transition:all .15s;font-weight:600}
+.tr-toggle:hover{background:rgba(0,0,0,.03)}
+.tr-toggle.on{background:#000;color:#fff;border-color:#000}
+.c-tr{margin-top:5px;padding:6px 9px;border-radius:6px;background:rgba(59,130,246,.05);border:1px dashed rgba(59,130,246,.2);font-size:10px;line-height:1.45;color:#2563eb;display:none}
+.c-tr.vis{display:block}
+.c-tr-label{font-size:8px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dark2);margin-bottom:2px;font-weight:600}
+
+/* Suggest + compose */
+.c-suggest{margin-top:6px;padding:8px 12px;border:1px dashed var(--border-dark);border-radius:6px;background:rgba(0,0,0,.01)}
+.c-suggest-label{font-size:8px;color:var(--text-dark2);text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-bottom:4px}
+.c-suggest-chips{display:flex;flex-wrap:wrap;gap:4px}
+.c-suggest-chip{padding:3px 8px;border-radius:5px;font-size:10px;border:1px solid var(--border-dark);cursor:pointer;transition:all .12s;background:var(--bg)}
+.c-suggest-chip:hover{border-color:rgba(0,0,0,.25);background:rgba(0,0,0,.02)}
+.c-compose{padding:8px 12px;border-top:1px solid var(--border-dark);display:flex;gap:6px;background:var(--bg)}
+.c-input{flex:1;padding:6px 10px;border-radius:6px;border:1px solid var(--border-dark);background:var(--bg);font-size:11px;outline:none;font-family:inherit}
+.c-input:focus{border-color:rgba(0,0,0,.25)}
+.c-send{padding:6px 14px;border-radius:6px;background:#000;color:#fff;border:none;font-size:11px;font-weight:600;cursor:pointer}
+.c-send:hover{opacity:.85}
+
+/* Wizard Modal */
+.wiz-step{margin-bottom:18px}
+.wiz-step h4{font-size:13px;font-weight:700;margin-bottom:10px}
+.wiz-option{padding:12px 16px;border:1px solid var(--border-dark);border-radius:10px;margin-bottom:6px;cursor:pointer;transition:all .15s;font-size:12px;display:flex;align-items:center;gap:10px}
+.wiz-option:hover{border-color:rgba(0,0,0,.25);background:rgba(0,0,0,.015)}
+.wiz-option.sel{border-color:#000;background:rgba(0,0,0,.04);font-weight:600}
+.wiz-input{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border-dark);font-size:12px;outline:none;font-family:inherit}
+.wiz-input:focus{border-color:rgba(0,0,0,.3)}
+.wiz-tags{display:flex;flex-wrap:wrap;gap:6px}
+.wiz-tag{padding:5px 12px;border-radius:6px;font-size:11px;border:1px solid var(--border-dark);cursor:pointer;transition:all .12s;font-weight:500}
+.wiz-tag:hover,.wiz-tag.sel{border-color:#000;background:rgba(0,0,0,.06);font-weight:600}
+.wiz-launch{width:100%;padding:12px;border-radius:10px;background:#000;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s}
+.wiz-launch:hover{opacity:.85}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.capability-card{animation:fadeUp .3s ease both}
+.capability-card:nth-child(2){animation-delay:.05s}
+.capability-card:nth-child(3){animation-delay:.1s}
+
+@media(max-width:768px){
+  .landing,.flow-header,.metrics-strip,.view-tabs,.pipeline-wrap,.funnel-wrap,.workflow-wrap,.table-wrap{padding-left:20px!important;padding-right:20px!important}
+  .m-grid{grid-template-columns:1fr}
+  .p-col{min-width:180px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LANDING VIEW ===== -->
+<div class="landing" id="landing">
+  <div class="landing-header">
+    <div class="landing-title">Atelier</div>
+    <div class="landing-subtitle">Agentic Growth System — Autonomous supplier discovery, outreach & engagement</div>
+  </div>
+  <div class="landing-section-label">Current Capability Searches</div>
+  <div class="capability-grid" id="cap-grid"></div>
+  <div style="margin-top:20px">
+    <div class="new-capability-card" onclick="openWizard()">
+      <div class="plus">+</div>
+      <div class="label">New Capability Search</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FLOW VIEW ===== -->
+<div class="flow-view" id="flow-view">
+  <div class="flow-header">
+    <button class="flow-back" onclick="goLanding()">← Back</button>
+    <div class="flow-title" id="flow-title"></div>
+    <div class="flow-actions">
+      <button class="flow-btn" onclick="agentAction('enrich')">⚡ Enrich All</button>
+      <button class="flow-btn" onclick="agentAction('outreach')">📧 Send Outreach</button>
+      <button class="flow-btn primary" onclick="agentAction('full')">🚀 Run Full Pipeline</button>
+    </div>
+  </div>
+  <div class="metrics-strip" id="metrics-strip"></div>
+  <div class="view-tabs">
+    <div class="vt active" data-v="pipeline" onclick="switchView('pipeline')">Pipeline</div>
+    <div class="vt" data-v="funnel" onclick="switchView('funnel')">Funnel</div>
+    <div class="vt" data-v="workflow" onclick="switchView('workflow')">Workflow</div>
+    <div class="vt" data-v="table" onclick="switchView('table')">Table</div>
+  </div>
+  <div id="v-pipeline" class="pipeline-wrap"></div>
+  <div id="v-funnel" class="funnel-wrap" style="display:none"></div>
+  <div id="v-workflow" class="workflow-wrap" style="display:none"></div>
+  <div id="v-table" class="table-wrap" style="display:none"></div>
+</div>
+
+<!-- ===== DETAIL MODAL ===== -->
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<!-- ===== WIZARD MODAL ===== -->
+<div class="modal-bg" id="wiz-modal" onclick="if(event.target===this)closeWiz()">
+  <div class="modal-box" id="wiz-box" style="max-width:520px"></div>
+</div>
+
+<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:8px;background:#000;color:#fff;font-size:12px;font-weight:600;opacity:0;transition:opacity .3s;z-index:500;pointer-events:none"></div>
+
+<script>
+/* DATA_PLACEHOLDER */
+
+let curFlow = null;
+
+/* ===== LANDING ===== */
+function renderLanding() {
+  const g = document.getElementById('cap-grid');
+  let h = '';
+  FLOWS.forEach(f => {
+    const onboarded = f.supplier_ids.length;
+    const target = f.total_target;
+    const dot = f.status === 'active' ? 'active' : 'draft';
+    h += `<div class="capability-card" onclick="openFlow('${f.id}')">
+      <img class="card-image" src="${f.image}" alt="${f.name}" loading="lazy">
+      <div class="card-body">
+        <div class="card-pill"><span class="pill-dot ${dot}"></span><span class="pill-num">${onboarded}</span> out of ${target} suppliers onboarded</div>
+        <div class="card-title">${f.name}</div>
+        <div class="card-desc">${f.description}</div>
+        <div class="card-cta">Click for funnel →</div>
+      </div>
+    </div>`;
+  });
+  g.innerHTML = h;
+}
+
+function openFlow(id) {
+  curFlow = FLOWS.find(f => f.id === id);
+  if (!curFlow) return;
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('flow-view').classList.add('active');
+  document.getElementById('flow-title').textContent = curFlow.full_name || curFlow.name;
+  renderFlowView();
+}
+
+function goLanding() {
+  curFlow = null;
+  document.getElementById('flow-view').classList.remove('active');
+  document.getElementById('landing').style.display = '';
+}
+
+/* ===== FLOW VIEW ===== */
+function getFlowData() {
+  if (!curFlow) return [];
+  return DATA.filter(s => curFlow.supplier_ids.includes(s.id));
+}
+
+function renderFlowView() {
+  renderMetrics();
+  renderPipeline();
+  renderFunnel();
+  renderWorkflow();
+  renderTable();
+}
+
+function renderMetrics() {
+  const ss = getFlowData();
+  const enriched = ss.filter(s => ['ENRICHED','OUTREACH_SENT','CONVERSING','QUALIFIED','HUMAN_HANDOFF'].includes(s.outreach_state)).length;
+  const outreached = ss.filter(s => ['OUTREACH_SENT','CONVERSING','QUALIFIED','HUMAN_HANDOFF'].includes(s.outreach_state)).length;
+  const qualified = ss.filter(s => ['QUALIFIED','HUMAN_HANDOFF'].includes(s.outreach_state)).length;
+  const avgQ = ss.length ? Math.round(ss.reduce((a,s)=>a+(s.qualification_score||0),0)/ss.length) : 0;
+  const avgC = ss.length ? Math.round(ss.reduce((a,s)=>a+(s.data_completeness_score||0),0)/ss.length) : 0;
+  const msgs = ss.reduce((a,s) => a + (CONVOS[s.id] ? CONVOS[s.id].length : 0), 0);
+
+  document.getElementById('metrics-strip').innerHTML = `
+    <div class="ms-item"><div class="ms-label">Total</div><div class="ms-value">${ss.length}</div></div>
+    <div class="ms-item"><div class="ms-label">Enriched</div><div class="ms-value">${enriched}</div></div>
+    <div class="ms-item"><div class="ms-label">Outreached</div><div class="ms-value">${outreached}</div></div>
+    <div class="ms-item"><div class="ms-label">Qualified</div><div class="ms-value">${qualified}</div></div>
+    <div class="ms-item"><div class="ms-label">Avg Quality</div><div class="ms-value">${avgQ}</div><div class="ms-sub">/100</div></div>
+    <div class="ms-item"><div class="ms-label">Avg Complete</div><div class="ms-value">${avgC}</div><div class="ms-sub">/100</div></div>
+    <div class="ms-item"><div class="ms-label">Messages</div><div class="ms-value">${msgs}</div></div>
+  `;
+}
+
+function renderPipeline() {
+  const ss = getFlowData();
+  const el = document.getElementById('v-pipeline');
+  let h = '';
+  STATES.forEach(st => {
+    const col = ss.filter(s => (s.outreach_state||'DISCOVERED') === st.key);
+    h += `<div class="p-col"><div class="p-col-head" style="background:${st.color}0a"><span>${st.icon} ${st.label}</span><span class="p-col-count">${col.length}</span></div><div class="p-col-cards">`;
+    col.forEach(s => {
+      const qs = s.qualification_score||0;
+      const cs = s.data_completeness_score||0;
+      const ch = s.outreach_channel||'';
+      const mc = CONVOS[s.id] ? CONVOS[s.id].length : 0;
+      h += `<div class="p-card" onclick="showDetail(${s.id})">
+        <div class="p-card-name">${s.trade_name}</div>
+        <div class="p-card-meta"><span>${s._country}</span>${mc?`<span>💬${mc}</span>`:''}${s.reply_count?`<span>↩️${s.reply_count}</span>`:''}</div>
+        <div class="p-card-scores">
+          <div class="p-card-bar"><div class="p-card-fill" style="width:${qs}%;background:${qs>=70?'#22c55e':qs>=40?'#f59e0b':'#ef4444'}"></div></div>
+          <div class="p-card-bar"><div class="p-card-fill" style="width:${cs}%;background:#3b82f6"></div></div>
+        </div>
+        ${ch?`<div class="p-card-chip">${ch==='wechat'?'💚 WeChat':ch==='email'?'✉️ Email':ch==='zalo'?'💜 Zalo':ch==='line'?'💚 LINE':ch==='whatsapp'?'📱 WhatsApp':ch}</div>`:''}
+      </div>`;
+    });
+    h += '</div></div>';
+  });
+  el.innerHTML = h;
+}
+
+function renderFunnel() {
+  const ss = getFlowData();
+  const el = document.getElementById('v-funnel');
+  const stages = ['DISCOVERED','ENRICHED','OUTREACH_SENT','CONVERSING','QUALIFIED','HUMAN_HANDOFF'];
+  const counts = stages.map(st => ss.filter(s => stages.indexOf(s.outreach_state||'DISCOVERED') >= stages.indexOf(st)).length);
+  const mx = Math.max(...counts,1);
+  let h = '<div style="display:flex;flex-direction:column;align-items:center;padding-top:20px">';
+  stages.forEach((st,i) => {
+    const state = STATES.find(s => s.key === st);
+    const c = counts[i];
+    const pct = Math.max(Math.round((c/mx)*100),15);
+    const prev = i>0 ? counts[i-1] : c;
+    const drop = i>0 && prev>0 ? Math.round((1-c/prev)*100) : 0;
+    h += `<div class="f-stage" onclick="jumpPipeline('${st}')">
+      <div class="f-bar" style="width:${pct}%;background:${state.color}">${state.icon} ${c}</div>
+      <div class="f-info"><div class="f-label">${state.label}</div>${drop?`<div class="f-drop">↓${drop}% drop</div>`:''}</div>
+    </div>`;
+  });
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+function renderWorkflow() {
+  const el = document.getElementById('v-workflow');
+  const phases = [
+    {icon:'🔍',title:'INDEX',steps:['Discover new manufacturers','Enrich profiles (27+ fields)','Verify certifications','Score quality & completeness','Deduplicate against master DB']},
+    {icon:'📧',title:'OUTREACH',steps:['Select channel by region','Personalize message by profile','A/B test first-touch variants','Send multi-touch sequence','Respect anti-spam & rate limits']},
+    {icon:'💬',title:'ENGAGE',steps:['Auto-detect language & translate','Classify intent (interested/no/info)','Ask qualification questions','Track conversation state per flow','Escalate pricing/contracts to human']},
+    {icon:'👤',title:'HANDOFF',steps:['Generate handoff brief','Notify sourcing manager','Archive conversation log','Mark as handed off','Track post-handoff status']}
+  ];
+  let h = '<div class="wf-chart">';
+  phases.forEach((p,i) => {
+    h += `<div class="wf-phase"><div class="wf-phase-title">${p.icon} ${p.title}</div><ul class="wf-phase-steps">${p.steps.map(s=>`<li>${s}</li>`).join('')}</ul></div>`;
+    if (i<phases.length-1) h += '<div class="wf-arrow">↓</div>';
+  });
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+function renderTable() {
+  const ss = getFlowData();
+  const el = document.getElementById('v-table');
+  const cols = ['trade_name','_country','outreach_state','qualification_score','data_completeness_score','reply_count','outreach_channel','wechat_id','certs_verified'];
+  const lbls = ['Name','Country','State','Quality','Complete','Replies','Channel','WeChat','Certs'];
+  let h = '<table><thead><tr>';
+  lbls.forEach(l => h += `<th>${l}</th>`);
+  h += '</tr></thead><tbody>';
+  ss.forEach(s => {
+    h += `<tr onclick="showDetail(${s.id})">`;
+    cols.forEach(c => {
+      let v = s[c] || '—';
+      if (c==='outreach_state') { const st=STATES.find(x=>x.key===(v||'DISCOVERED')); v=st?`${st.icon} ${st.label}`:v; }
+      if (c==='certs_verified') { const cls=v==='VERIFIED'?'cert-v':v==='CLAIMED'?'cert-c':'cert-u'; v=`<span class="cert-tag ${cls}">${(v||'UNVERIFIED').toLowerCase()}</span>`; }
+      h += `<td>${v}</td>`;
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  el.innerHTML = h;
+}
+
+/* ===== VIEW SWITCHING ===== */
+function switchView(v) {
+  document.querySelectorAll('.vt').forEach(t => t.classList.toggle('active', t.dataset.v===v));
+  ['pipeline','funnel','workflow','table'].forEach(x => {
+    document.getElementById('v-'+x).style.display = x===v?'':'none';
+  });
+}
+
+function jumpPipeline(state) {
+  switchView('pipeline');
+  const cols = document.querySelectorAll('.p-col-cards');
+  cols.forEach(c => { /* scroll to matching column */ });
+}
+
+/* ===== DETAIL MODAL ===== */
+function showDetail(id) {
+  const s = DATA.find(x => x.id === id);
+  if (!s) return;
+  const st = STATES.find(x => x.key === (s.outreach_state||'DISCOVERED'));
+  const cv = s.certs_verified || 'UNVERIFIED';
+  const msgs = CONVOS[s.id] || [];
+  
+  let h = `<div class="modal-top"><h2>${s.trade_name}</h2><button class="modal-x" onclick="closeModal()">✕</button></div>`;
+  h += '<div class="modal-inner">';
+  
+  // Status
+  h += `<div class="m-section"><h3>Pipeline Status</h3><div class="m-grid">
+    <div><div class="m-field-label">State</div><div class="m-field-value">${st?.icon||''} ${st?.label||'—'}</div></div>
+    <div><div class="m-field-label">Quality Score</div><div class="m-field-value">${s.qualification_score||0}/100</div></div>
+    <div><div class="m-field-label">Completeness</div><div class="m-field-value">${s.data_completeness_score||0}/100</div></div>
+    <div><div class="m-field-label">Country</div><div class="m-field-value">${s._country}</div></div>
+    <div><div class="m-field-label">Replies</div><div class="m-field-value">${s.reply_count||0}</div></div>
+    <div><div class="m-field-label">NDA</div><div class="m-field-value">${s.nda_signed?'✅ Signed':s.nda_sent?'📤 Sent':'—'}</div></div>
+  </div></div>`;
+  
+  // Company
+  h += `<div class="m-section"><h3>Company Information</h3><div class="m-grid">
+    <div><div class="m-field-label">Legal Name</div><div class="m-field-value ${s.legal_name?'':'empty'}">${s.legal_name||'N/A'}</div></div>
+    <div><div class="m-field-label">Type</div><div class="m-field-value ${s.supplier_type?'':'empty'}">${s.supplier_type||'N/A'}</div></div>
+    <div><div class="m-field-label">Factory</div><div class="m-field-value ${s.factory_locations?'':'empty'}">${s.factory_locations||'N/A'}</div></div>
+    <div><div class="m-field-label">Experience</div><div class="m-field-value ${s.market_experience?'':'empty'}">${s.market_experience||'N/A'}</div></div>
+    <div><div class="m-field-label">Brands</div><div class="m-field-value ${s.brands_worked_with?'':'empty'}">${s.brands_worked_with||'N/A'}</div></div>
+    <div><div class="m-field-label">MOQ</div><div class="m-field-value ${s.moq?'':'empty'}">${s.moq||'N/A'}</div></div>
+  </div></div>`;
+  
+  // Contact & Certs
+  h += `<div class="m-section"><h3>Contact & Certifications</h3><div class="m-grid">
+    <div><div class="m-field-label">Contact Name</div><div class="m-field-value ${s.contact_name?'':'empty'}">${s.contact_name||'N/A'}</div></div>
+    <div><div class="m-field-label">WeChat</div><div class="m-field-value ${s.wechat_id?'':'empty'}">${s.wechat_id||'Not found'}</div></div>
+    <div><div class="m-field-label">Certifications</div><div class="m-field-value">${s.certs_and_audits||'None listed'}</div></div>
+    <div><div class="m-field-label">Verified Notes</div><div class="m-field-value">${s.certs_verified_notes||'No notes'}</div></div>
+  </div></div>`;
+  
+  // ===== CONVERSATION =====
+  h += `<div class="m-section"><h3>💬 Conversation</h3>`;
+  if (msgs.length === 0) {
+    h += `<div class="conv-box"><div style="text-align:center;padding:30px;color:var(--text-dark2);font-size:12px">💬 No conversation yet<br><span style="font-size:10px;color:rgba(0,0,0,.35)">Start outreach to begin a conversation</span></div></div>`;
+  } else {
+    const last = msgs[msgs.length-1];
+    const chs = [...new Set(msgs.map(m=>m.channel))];
+    h += `<div class="conv-box" id="cbox-${s.id}">
+      <div class="conv-head">
+        <div class="conv-head-title">${msgs.length} messages · Last ${last.timestamp.split(' ')[0]}</div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="tr-toggle" id="trb-${s.id}" onclick="togTr(${s.id})">🌐 Translate</button>
+          ${chs.map(ch=>`<span class="conv-chip">${ch==='wechat'?'💚':ch==='email'?'✉️':ch==='zalo'?'💜':ch==='line'?'💚':ch==='whatsapp'?'📱':'📨'} ${ch}</span>`).join('')}
+        </div>
+      </div>
+      <div class="conv-body" id="cb-${s.id}">`;
+    
+    msgs.forEach(m => {
+      const out = m.direction==='outbound';
+      const tr = TRANSLATIONS[m.id] || null;
+      h += `<div class="c-msg ${out?'out':'in'}">
+        <div class="c-av">${out?'🤖':'👤'}</div>
+        <div style="max-width:76%">
+          <div style="font-size:9px;color:rgba(0,0,0,.35);margin-bottom:1px;${out?'text-align:right':''}">${out?'Agent':s.trade_name} · ${m.channel} · ${m.timestamp.split(' ')[1]||''}</div>
+          <div class="c-bubble">${m.content.replace(/\n/g,'<br>')}
+            ${tr?`<div class="c-tr" data-t="${m.id}"><div class="c-tr-label">🌐 English Translation</div>${tr}</div>`:''}
+          </div>
+          <div class="c-meta">
+            <span class="c-time">${m.timestamp.split(' ')[0]||''}</span>
+            ${m.agent_action?`<span class="c-act">⚡ ${m.agent_action}</span>`:''}
+          </div>
+        </div>
+      </div>`;
+    });
+    
+    h += `</div>`;
+    
+    // Suggestions
+    const curSt = s.outreach_state||'DISCOVERED';
+    const suggs = ({
+      'DISCOVERED':['Enrich this profile','Check cert databases'],
+      'ENRICHED':[`Send outreach to ${s.trade_name}`,'Draft WeChat intro'],
+      'OUTREACH_SENT':['Mark responding','Follow up (Day 3)','Follow up (Day 7)','Mark unresponsive'],
+      'CONVERSING':['Request sample pricing','Share NDA','Ask about capacity','Confirm jacquard capability'],
+      'QUALIFIED':['Hand off to sourcing mgr','Request video call'],
+      'NOT_INTERESTED':['Re-engage different angle','Wait 90 days'],
+      'UNRESPONSIVE':['Re-engage message','Try alternate channel']
+    })[curSt] || [];
+    
+    if (suggs.length) {
+      h += `<div class="c-suggest"><div class="c-suggest-label">🤖 Suggested Replies</div><div class="c-suggest-chips">`;
+      suggs.forEach(sg => { h += `<div class="c-suggest-chip" onclick="useChip(this,'${sg.replace(/'/g,"\\'")}')">${sg}</div>`; });
+      h += `</div></div>`;
+    }
+    
+    h += `<div class="c-compose"><input class="c-input" id="ci-${s.id}" placeholder="Compose a message..." onkeydown="if(event.key==='Enter')sendMsg(${s.id})"><button class="c-send" onclick="sendMsg(${s.id})">Send</button></div></div>`;
+  }
+  h += `</div>`;
+  
+  // Actions
+  h += `<div class="m-section"><h3>Agent Actions</h3><div class="action-row">`;
+  const cs = s.outreach_state||'DISCOVERED';
+  const nm = {
+    'DISCOVERED':[{to:'ENRICHED',label:'▶ Enrich Profile',cls:'go'}],
+    'ENRICHED':[{to:'OUTREACH_SENT',label:'📧 Send Outreach',cls:'go'},{to:'NOT_INTERESTED',label:'❌ Not Interested',cls:'stop'}],
+    'OUTREACH_SENT':[{to:'CONVERSING',label:'💬 Mark Responding',cls:'go'},{to:'UNRESPONSIVE',label:'⏳ Unresponsive',cls:'wait'},{to:'NOT_INTERESTED',label:'❌ Not Interested',cls:'stop'}],
+    'CONVERSING':[{to:'QUALIFIED',label:'✅ Qualify',cls:'go'},{to:'NOT_INTERESTED',label:'❌ Not Interested',cls:'stop'}],
+    'QUALIFIED':[{to:'HUMAN_HANDOFF',label:'👤 Hand Off',cls:'go'}],
+    'HUMAN_HANDOFF':[],
+    'NOT_INTERESTED':[{to:'DISCOVERED',label:'🔄 Re-discover',cls:'go'}],
+    'UNRESPONSIVE':[{to:'OUTREACH_SENT',label:'📧 Re-outreach',cls:'go'}]
+  };
+  (nm[cs]||[]).forEach(a => {
+    h += `<button class="act-btn ${a.cls}" onclick="transState(${s.id},'${a.to}')">${a.label}</button>`;
+  });
+  h += '</div></div>';
+  
+  h += '</div>';
+  document.getElementById('modal-box').innerHTML = h;
+  document.getElementById('modal').classList.add('show');
+  
+  setTimeout(() => { const b = document.getElementById('cb-'+s.id); if(b) b.scrollTop = b.scrollHeight; }, 80);
+}
+
+function togTr(sid) {
+  const btn = document.getElementById('trb-'+sid);
+  const box = document.getElementById('cbox-'+sid);
+  if (!btn||!box) return;
+  const on = btn.classList.toggle('on');
+  box.querySelectorAll('.c-tr').forEach(el => el.classList.toggle('vis', on));
+  btn.textContent = on ? '🌐 Translated ✓' : '🌐 Translate';
+}
+
+function useChip(el, text) {
+  const input = el.closest('.conv-box').querySelector('.c-input');
+  if (input) input.value = text;
+}
+
+function sendMsg(sid) {
+  const input = document.getElementById('ci-'+sid);
+  if (!input||!input.value.trim()) return;
+  input.value = '';
+  toast('📤 Message queued for ' + (DATA.find(s=>s.id===sid)?.trade_name||'supplier'));
+}
+
+function transState(id, to) {
+  const s = DATA.find(x => x.id === id);
+  if (!s) return;
+  s.outreach_state = to;
+  const st = STATES.find(x => x.key === to);
+  toast(`✅ ${s.trade_name} → ${st?.label||to}`);
+  closeModal();
+  renderFlowView();
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+/* ===== WIZARD ===== */
+function openWizard() {
+  const el = document.getElementById('wiz-box');
+  el.innerHTML = `<div class="modal-top"><h2>+ New Capability Search</h2><button class="modal-x" onclick="closeWiz()">✕</button></div>
+  <div class="modal-inner">
+    <div class="wiz-step"><h4>1. Product Category</h4>
+      <div class="wiz-option" onclick="wizSel(this,'cat','towels')">🧖 Luxury Towels</div>
+      <div class="wiz-option" onclick="wizSel(this,'cat','bedding')">🛏️ Premium Bedding</div>
+      <div class="wiz-option" onclick="wizSel(this,'cat','apparel')">👕 Organic Apparel</div>
+      <div class="wiz-option" onclick="wizSel(this,'cat','kitchen')">🍳 Kitchen Textiles</div>
+      <div class="wiz-option" onclick="wizSel(this,'cat','bath')">🧼 Bath Accessories</div>
+      <div class="wiz-option" onclick="wizSel(this,'cat','custom')">✏️ Custom / Other</div>
+    </div>
+    <div class="wiz-step"><h4>2. Flow Name</h4>
+      <input class="wiz-input" id="wname" placeholder="e.g., Luxury Towels — Hotel & Resort">
+    </div>
+    <div class="wiz-step"><h4>3. Target Regions</h4>
+      <div class="wiz-tags" id="wregions">
+        <div class="wiz-tag" onclick="wizTag(this)">🇨🇳 China</div>
+        <div class="wiz-tag" onclick="wizTag(this)">🇹🇼 Taiwan</div>
+        <div class="wiz-tag" onclick="wizTag(this)">🇯🇵 Japan</div>
+        <div class="wiz-tag" onclick="wizTag(this)">🇻🇳 Vietnam</div>
+        <div class="wiz-tag" onclick="wizTag(this)">🇹🇭 Thailand</div>
+        <div class="wiz-tag" onclick="wizTag(this)">🇮🇩 Indonesia</div>
+        <div class="wiz-tag" onclick="wizTag(this)">🇮🇳 India</div>
+        <div class="wiz-tag" onclick="wizTag(this)">🇧🇩 Bangladesh</div>
+        <div class="wiz-tag" onclick="wizTag(this)">🇵🇰 Pakistan</div>
+        <div class="wiz-tag" onclick="wizTag(this)">🇲🇾 Malaysia</div>
+      </div>
+    </div>
+    <div class="wiz-step"><h4>4. Required Certifications</h4>
+      <div class="wiz-tags">
+        <div class="wiz-tag" onclick="wizTag(this)">OEKO-TEX</div>
+        <div class="wiz-tag" onclick="wizTag(this)">GOTS</div>
+        <div class="wiz-tag" onclick="wizTag(this)">WRAP</div>
+        <div class="wiz-tag" onclick="wizTag(this)">BSCI</div>
+        <div class="wiz-tag" onclick="wizTag(this)">Fair Trade</div>
+      </div>
+    </div>
+    <button class="wiz-launch" onclick="createFlow()">🚀 Create Flow & Start Indexing</button>
+  </div>`;
+  document.getElementById('wiz-modal').classList.add('show');
+}
+
+function closeWiz() { document.getElementById('wiz-modal').classList.remove('show'); }
+
+let wizData = {cat:''};
+function wizSel(el, field, val) {
+  el.parentElement.querySelectorAll('.wiz-option').forEach(o=>o.classList.remove('sel'));
+  el.classList.add('sel');
+  wizData[field] = val;
+}
+function wizTag(el) { el.classList.toggle('sel'); }
+
+function createFlow() {
+  const name = document.getElementById('wname')?.value || 'New Flow';
+  toast('🚀 Flow "' + name + '" created! Agent starting indexing...');
+  closeWiz();
+}
+
+/* ===== UTILS ===== */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity='1';
+  setTimeout(()=>t.style.opacity='0', 2800);
+}
+
+function agentAction(a) {
+  toast(`🤖 Agent triggered: ${a}`);
+}
+
+/* ===== INIT ===== */
+renderLanding();
+</script>
+</body>
+</html>

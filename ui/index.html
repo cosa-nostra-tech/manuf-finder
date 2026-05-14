@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luxury Towel Supplier Database</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232734;
+    --border: #2e3345;
+    --text: #e4e6ed;
+    --muted: #8b8fa3;
+    --accent: #6c8cff;
+    --accent2: #56d4a5;
+    --warn: #f0b45a;
+    --red: #e55c5c;
+    --radius: 8px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  header h1 .icon { font-size: 22px; }
+  .header-stats {
+    display: flex;
+    gap: 16px;
+  }
+  .stat-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .stat-pill strong { color: var(--text); }
+
+  .toolbar {
+    padding: 12px 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all .15s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active {
+    background: rgba(108,140,255,.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .search-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 220px;
+    outline: none;
+    transition: border .15s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--muted); }
+
+  .table-wrap {
+    padding: 16px 24px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--surface);
+    color: var(--muted);
+    font-weight: 500;
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 56px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--accent); }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td {
+    padding: 10px 12px;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  tbody td.expand { white-space: normal; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin: 1px 2px;
+  }
+  .tag-cn { background: rgba(224,68,68,.15); color: #e06060; }
+  .tag-jp { background: rgba(232,88,92,.15); color: #e8585c; }
+  .tag-tw { background: rgba(86,212,165,.15); color: #56d4a5; }
+  .tag-vn { background: rgba(240,180,90,.15); color: #f0b45a; }
+  .tag-id { background: rgba(108,140,255,.15); color: #6c8cff; }
+  .tag-th { background: rgba(200,120,220,.15); color: #c878dc; }
+  .tag-my { background: rgba(255,160,100,.15); color: #ffa064; }
+
+  .cert-tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    margin: 1px 2px;
+    background: rgba(108,140,255,.1);
+    color: var(--accent);
+    border: 1px solid rgba(108,140,255,.2);
+  }
+  .cert-gots { background: rgba(86,212,165,.1); color: var(--accent2); border-color: rgba(86,212,165,.2); }
+
+  .subtype-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,.06);
+    color: var(--muted);
+  }
+
+  /* Detail modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.6);
+    z-index: 200;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+    overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 800px;
+    padding: 0;
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .modal-header h2 { font-size: 20px; font-weight: 600; }
+  .modal-header .legal { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .close-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all .15s;
+  }
+  .close-btn:hover { background: var(--surface2); color: var(--text); }
+  .modal-body {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .field { }
+  .field-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .field-value {
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .field-value a { color: var(--accent); text-decoration: none; }
+  .field-value a:hover { text-decoration: underline; }
+  .field.full { grid-column: 1 / -1; }
+
+  .region-flag { font-size: 15px; margin-right: 4px; }
+  .moq-highlight {
+    background: rgba(240,180,90,.12);
+    color: var(--warn);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="icon">🛁</span> Luxury Towel Supplier Database</h1>
+  <div class="header-stats" id="stats"></div>
+</header>
+
+<div class="toolbar">
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="China">🇨🇳 China</button>
+  <button class="filter-btn" data-filter="Japan">🇯🇵 Japan</button>
+  <button class="filter-btn" data-filter="Taiwan">🇹🇼 Taiwan</button>
+  <button class="filter-btn" data-filter="Vietnam">🇻🇳 Vietnam</button>
+  <button class="filter-btn" data-filter="Indonesia">🇮🇩 Indonesia</button>
+  <button class="filter-btn" data-filter="Thailand">🇹🇭 Thailand</button>
+  <button class="filter-btn" data-filter="Malaysia">🇲🇾 Malaysia</button>
+  <input class="search-box" placeholder="Search suppliers..." id="searchBox">
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Trade Name</th>
+        <th>Location</th>
+        <th>Type</th>
+        <th>Key Certifications</th>
+        <th>Brands / Clients</th>
+        <th>Contact</th>
+        <th>MOQ</th>
+        <th>Experience</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+const DATA = /* DATA_PLACEHOLDER */[];
+const FLAGS = {China:'🇨🇳',Japan:'🇯🇵',Taiwan:'🇹🇼',Vietnam:'🇻🇳',Indonesia:'🇮🇩',Thailand:'🇹🇭',Malaysia:'🇲🇾'};
+const TAG_CLASSES = {China:'tag-cn',Japan:'tag-jp',Taiwan:'tag-tw',Vietnam:'tag-vn',Indonesia:'tag-id',Thailand:'tag-th',Malaysia:'tag-my'};
+
+function getRegion(loc) {
+  for (const r of ['China','Japan','Taiwan','Vietnam','Indonesia','Thailand','Malaysia']) {
+    if (loc.includes(r)) return r;
+  }
+  return 'Other';
+}
+
+function certTags(s) {
+  if (!s) return '';
+  return s.split(';').map(c => {
+    c = c.trim();
+    const cls = c.includes('GOTS') ? 'cert-gots' : 'cert-tag';
+    return `<span class="${cls}">${c}</span>`;
+  }).join('');
+}
+
+let currentFilter = 'all';
+let searchTerm = '';
+
+function render() {
+  let filtered = DATA;
+  if (currentFilter !== 'all') {
+    filtered = filtered.filter(s => getRegion(s.factory_locations) === currentFilter);
+  }
+  if (searchTerm) {
+    const q = searchTerm.toLowerCase();
+    filtered = filtered.filter(s =>
+      (s.trade_name||'').toLowerCase().includes(q) ||
+      (s.legal_name||'').toLowerCase().includes(q) ||
+      (s.factory_locations||'').toLowerCase().includes(q) ||
+      (s.brands_worked_with||'').toLowerCase().includes(q) ||
+      (s.certs_and_audits||'').toLowerCase().includes(q)
+    );
+  }
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = filtered.map(s => {
+    const region = getRegion(s.factory_locations);
+    const flag = FLAGS[region]||'';
+    const tc = TAG_CLASSES[region]||'';
+    return `<tr data-id="${s.id}" onclick="openModal(${s.id})" style="cursor:pointer">
+      <td>${s.id}</td>
+      <td><strong>${s.trade_name||''}</strong></td>
+      <td><span class="tag ${tc}">${flag} ${region}</span></td>
+      <td><span class="subtype-badge">${s.supplier_subtype||s.supplier_type||''}</span></td>
+      <td>${certTags(s.certs_and_audits)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${s.brands_worked_with||''}</td>
+      <td>${s.contact_name||''}</td>
+      <td><span class="moq-highlight">${s.moq||''}</span></td>
+      <td>${s.market_experience||''}</td>
+    </tr>`;
+  }).join('');
+
+  // Stats
+  const statsEl = document.getElementById('stats');
+  const regionCounts = {};
+  filtered.forEach(s => { const r = getRegion(s.factory_locations); regionCounts[r] = (regionCounts[r]||0)+1; });
+  statsEl.innerHTML = `<span class="stat-pill"><strong>${filtered.length}</strong> suppliers</span>` +
+    Object.entries(regionCounts).map(([r,c]) => `<span class="stat-pill">${FLAGS[r]||''} <strong>${c}</strong> ${r}</span>`).join('');
+}
+
+function openModal(id) {
+  const s = DATA.find(x => x.id === id);
+  if (!s) return;
+  const region = getRegion(s.factory_locations);
+  const flag = FLAGS[region]||'';
+  const fields = [
+    ['Factory Locations', s.factory_locations],
+    ['Supplier Type', s.supplier_type],
+    ['Supplier Subtype', s.supplier_subtype],
+    ['Flags', s.flags],
+    ['Product Categories', s.product_categories],
+    ['Product Sub Categories', s.product_sub_categories],
+    ['Certifications & Audits', s.certs_and_audits],
+    ['Regulatory Compliance', s.regulatory_compliance],
+    ['Brands Worked With', s.brands_worked_with],
+    ['Contact Name', s.contact_name],
+    ['Market Experience', s.market_experience],
+    ['Certification Link', s.certification_link ? `<a href="${s.certification_link}" target="_blank">${s.certification_link}</a>` : ''],
+    ['IP Ownership', s.ip_ownership],
+    ['NDA Link', s.nda_link],
+    ['NDA Start', s.nda_start],
+    ['Non-Circumvent (months)', s.non_circumvent_period_months],
+    ['Agreement Link', s.agreement_link],
+    ['Agreement Notes', s.agreement_notes],
+    ['Term Notes', s.term_notes],
+    ['Date Created', s.date_created],
+    ['Date Outreached', s.date_outreached],
+    ['Date Qualified', s.date_qualified],
+    ['MOQ', s.moq],
+    ['MOQ Info', s.moq_info],
+  ];
+  const html = `<div class="modal-header">
+    <div><h2>${flag} ${s.trade_name||''}</h2><div class="legal">${s.legal_name||''}</div></div>
+    <button class="close-btn" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    ${fields.map(([label, value]) => `<div class="field">
+      <div class="field-label">${label}</div>
+      <div class="field-value">${value||'—'}</div>
+    </div>`).join('')}
+  </div>`;
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    render();
+  });
+});
+
+document.getElementById('searchBox').addEventListener('input', e => {
+  searchTerm = e.target.value;
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

@@ -333,7 +333,7 @@ def run_enrichment(brief_id: int):
     """Background task: enrich discovered suppliers with detailed data."""
     logger.info(f"Enrichment started for brief {brief_id}")
     try:
-        from discovery_agent import enrich_suppliers
+        from enrich_agent import enrich_suppliers
         # Get valid column names from DB schema
         with get_db() as db:
             schema_cols = {r[1] for r in db.execute("PRAGMA table_info(suppliers)").fetchall()}

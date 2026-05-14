@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luxury Towel Supplier Database</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232734;
+    --border: #2e3345;
+    --text: #e4e6ed;
+    --muted: #8b8fa3;
+    --accent: #6c8cff;
+    --accent2: #56d4a5;
+    --warn: #f0b45a;
+    --red: #e55c5c;
+    --radius: 8px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  header h1 .icon { font-size: 22px; }
+  .header-stats {
+    display: flex;
+    gap: 16px;
+  }
+  .stat-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .stat-pill strong { color: var(--text); }
+
+  .toolbar {
+    padding: 12px 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all .15s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active {
+    background: rgba(108,140,255,.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .search-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    width: 220px;
+    outline: none;
+    transition: border .15s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--muted); }
+
+  .table-wrap {
+    padding: 16px 24px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    background: var(--surface);
+    color: var(--muted);
+    font-weight: 500;
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 56px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--accent); }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td {
+    padding: 10px 12px;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  tbody td.expand { white-space: normal; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin: 1px 2px;
+  }
+  .tag-cn { background: rgba(224,68,68,.15); color: #e06060; }
+  .tag-jp { background: rgba(232,88,92,.15); color: #e8585c; }
+  .tag-tw { background: rgba(86,212,165,.15); color: #56d4a5; }
+  .tag-vn { background: rgba(240,180,90,.15); color: #f0b45a; }
+  .tag-id { background: rgba(108,140,255,.15); color: #6c8cff; }
+  .tag-th { background: rgba(200,120,220,.15); color: #c878dc; }
+  .tag-my { background: rgba(255,160,100,.15); color: #ffa064; }
+
+  .cert-tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    margin: 1px 2px;
+    background: rgba(108,140,255,.1);
+    color: var(--accent);
+    border: 1px solid rgba(108,140,255,.2);
+  }
+  .cert-gots { background: rgba(86,212,165,.1); color: var(--accent2); border-color: rgba(86,212,165,.2); }
+
+  .subtype-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,.06);
+    color: var(--muted);
+  }
+
+  /* Detail modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.6);
+    z-index: 200;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+    overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 800px;
+    padding: 0;
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .modal-header h2 { font-size: 20px; font-weight: 600; }
+  .modal-header .legal { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .close-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all .15s;
+  }
+  .close-btn:hover { background: var(--surface2); color: var(--text); }
+  .modal-body {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .field { }
+  .field-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .field-value {
+    font-size: 13px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .field-value a { color: var(--accent); text-decoration: none; }
+  .field-value a:hover { text-decoration: underline; }
+  .field.full { grid-column: 1 / -1; }
+
+  .region-flag { font-size: 15px; margin-right: 4px; }
+  .moq-highlight {
+    background: rgba(240,180,90,.12);
+    color: var(--warn);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="icon">🛁</span> Luxury Towel Supplier Database</h1>
+  <div class="header-stats" id="stats"></div>
+</header>
+
+<div class="toolbar">
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="China">🇨🇳 China</button>
+  <button class="filter-btn" data-filter="Japan">🇯🇵 Japan</button>
+  <button class="filter-btn" data-filter="Taiwan">🇹🇼 Taiwan</button>
+  <button class="filter-btn" data-filter="Vietnam">🇻🇳 Vietnam</button>
+  <button class="filter-btn" data-filter="Indonesia">🇮🇩 Indonesia</button>
+  <button class="filter-btn" data-filter="Thailand">🇹🇭 Thailand</button>
+  <button class="filter-btn" data-filter="Malaysia">🇲🇾 Malaysia</button>
+  <input class="search-box" placeholder="Search suppliers..." id="searchBox">
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Trade Name</th>
+        <th>Location</th>
+        <th>Type</th>
+        <th>Key Certifications</th>
+        <th>Brands / Clients</th>
+        <th>Contact</th>
+        <th>MOQ</th>
+        <th>Experience</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+const DATA = [{"id": 1, "trade_name": "Sunvim Group", "legal_name": "Sunvim Group Co., Ltd. (孚日集团股份有限公司)", "factory_locations": "Gaomi City, Weifang, Shandong Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Publicly listed (SZ:002083); Vertical integration spinning→finished", "product_categories": "Home Textiles", "product_sub_categories": "Bath Towels; Beach Towels; Hotel Towels; Kitchen Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; ISO 14001; BSCI; GOTS; GRS", "regulatory_compliance": "REACH (EU); CPSIA (US); AZO-free", "brands_worked_with": "Target; Walmart; IKEA; Disney", "contact_name": "Export Division / Mr. Sun", "date_created": "2026-05-11", "market_experience": "35+ years (est. 1987)", "certification_link": "https://www.sunvim.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "3,000–5,000 pcs/color/style", "moq_info": "Higher volume orders preferred; full container loads typical"}, {"id": 2, "trade_name": "Loftex China", "legal_name": "Shandong Loftex Home Textile Co., Ltd.", "factory_locations": "Zibo / Binzhou, Shandong Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Premium designer-brand OEM specialist; High GSM (600–800gsm) capability", "product_categories": "Home Textiles", "product_sub_categories": "Luxury Bath Towels; Hotel Towels; Beach Towels; Bathrobes", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; ISO 14001; BSCI; WRAP; GOTS", "regulatory_compliance": "REACH; CPSIA; Formaldehyde-free; AZO-free", "brands_worked_with": "Ralph Lauren Home; Calvin Klein Home; Tommy Hilfiger; Nautica; Disney; Marriott Hotels; Hilton Hotels", "contact_name": "Sales Department", "date_created": "2026-05-11", "market_experience": "25+ years", "certification_link": "https://www.loftex.com.cn", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "2,000–3,000 pcs/style", "moq_info": "Flexible for designer-brand programs; sampling available"}, {"id": 3, "trade_name": "Ningshing Home-Tex", "legal_name": "Ningbo Ningshing Home-Tex Co., Ltd. (宁波宁兴家居纺织品有限公司)", "factory_locations": "Ningbo, Zhejiang Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Backed by Ningshing Holdings (major trading group); strong export infrastructure", "product_categories": "Home Textiles", "product_sub_categories": "Bath Towels; Bamboo-Cotton Towels; Kitchen Towels; Beach Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; BSCI; SEDEX; GOTS", "regulatory_compliance": "REACH; AZO-free; Formaldehyde-free", "brands_worked_with": "Tesco; Carrefour; Aldi; Lidl; Kmart Australia", "contact_name": "Ms. Chen (Export Manager)", "date_created": "2026-05-11", "market_experience": "20+ years", "certification_link": "https://www.ningshinghometex.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "2,000 pcs/color/style", "moq_info": "Standard for mid-to-high-end European market orders"}, {"id": 4, "trade_name": "Hua Fang Industrial Group", "legal_name": "Hua Fang Industrial Group Co., Ltd. (华芳集团有限公司)", "factory_locations": "Zhangjiagang / Zhoucun, Shandong Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Large-scale group; vertical integration; competitive volume pricing", "product_categories": "Home Textiles", "product_sub_categories": "Bath Towels; Hotel Towels; Kitchen Towels; Yarn", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; ISO 14001; BSCI", "regulatory_compliance": "REACH; CPSIA", "brands_worked_with": "EU/US department store private labels; hotel chains", "contact_name": "Export Department", "date_created": "2026-05-11", "market_experience": "30+ years", "certification_link": "http://www.huafanggroup.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "3,000–5,000 pcs", "moq_info": "Competitive pricing for volume orders; full containers preferred"}, {"id": 5, "trade_name": "Jiangsu Sunshine Group", "legal_name": "Jiangsu Sunshine Group Co., Ltd. (江苏阳光集团)", "factory_locations": "Jiangyin, Wuxi, Jiangsu Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Known for luxury wool/suiting; significant home textile division", "product_categories": "Home Textiles; Apparel Fabrics", "product_sub_categories": "Premium Bath Towels; Hotel Towels; Luxury Towel Collections", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; ISO 14001; BSCI; WRAP", "regulatory_compliance": "REACH; CPSIA; AZO-free", "brands_worked_with": "Marks & Spencer; Next; Hugo Boss", "contact_name": "Mr. Lu (International Sales)", "date_created": "2026-05-11", "market_experience": "35+ years (est. 1986)", "certification_link": "http://www.sunshinegroup.com.cn", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "5,000 pcs/style", "moq_info": "Higher MOQ typical for large-group orders; sampling available"}, {"id": 6, "trade_name": "Shandong Luyi Textile", "legal_name": "Shandong Luyi Textile Co., Ltd. (山东鲁意纺织有限公司)", "factory_locations": "Zibo / Gaomi, Shandong Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Zero-twist / low-twist specialist; flexible MOQ for luxury orders", "product_categories": "Home Textiles", "product_sub_categories": "Zero-Twist Towels; Hotel Towels; Low-Twist Luxury Towels; Bath Mats", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; BSCI; GOTS", "regulatory_compliance": "REACH; Formaldehyde-free; AZO-free", "brands_worked_with": "Private label US/EU retailers; boutique hotel chains", "contact_name": "Ms. Wang (Sales Manager)", "date_created": "2026-05-11", "market_experience": "15+ years", "certification_link": "https://www.luyitextile.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,500–2,000 pcs/style", "moq_info": "Lower MOQ available for luxury hotel collections"}, {"id": 7, "trade_name": "Qingdao Ever-Shine Textile", "legal_name": "Qingdao Ever-Shine Textile Co., Ltd. (青岛益辉纺织品有限公司)", "factory_locations": "Qingdao, Shandong Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Strong US warehouse-club packaging capability; excellent QA", "product_categories": "Home Textiles", "product_sub_categories": "High-GSM Luxury Towels; Beach Towels; Hotel Towels; Bath Mats", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; BSCI; SEDEX; GOTS", "regulatory_compliance": "REACH; CPSIA; CA Prop 65", "brands_worked_with": "Costco; Sam's Club; JCPenney; Williams-Sonoma; Westin Hotels", "contact_name": "Mr. Zhang (Export Director)", "date_created": "2026-05-11", "market_experience": "18+ years", "certification_link": "https://www.evershinetex.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "2,000–3,000 pcs/style", "moq_info": "Standard for US retail and hotel programs"}, {"id": 8, "trade_name": "Yaodi Textile", "legal_name": "Changzhou Wujin Yaodi Textile Co., Ltd. (常州武进遥迪纺织品有限公司)", "factory_locations": "Changzhou, Jiangsu Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM", "flags": "Jacquard/patterned towel specialist; strong design team", "product_categories": "Home Textiles", "product_sub_categories": "Jacquard Towels; Patterned Beach Towels; Luxury Bath Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; BSCI", "regulatory_compliance": "REACH; AZO-free", "brands_worked_with": "European department stores; hotel suppliers", "contact_name": "Mr. Yao (General Manager)", "date_created": "2026-05-11", "market_experience": "20+ years", "certification_link": "http://www.yaoditextile.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "2,000 pcs/color", "moq_info": "Mid-to-premium range competitive pricing"}, {"id": 9, "trade_name": "Fuanna Home Textile", "legal_name": "Shenzhen Fuanna Home Textile Co., Ltd. (深圳市富安娜家居用品股份有限公司)", "factory_locations": "Shenzhen, Guangdong; Production in Changshu, Jiangsu & Gaomi, Shandong, China", "supplier_type": "Manufacturer", "supplier_subtype": "OBM/OEM", "flags": "Publicly listed (SZ:002327); Premium domestic brand in China; Moving into international OEM/ODM", "product_categories": "Home Textiles", "product_sub_categories": "Luxury Towels; Bed Linens; Duvet Covers; Pillowcases; Home Decor", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; ISO 14001; BSCI", "regulatory_compliance": "GB 18401 (China Class A); REACH", "brands_worked_with": "Own brands (Fuanna, Versai); Sheraton; Westin (China market)", "contact_name": "Ms. Lin (International Business)", "date_created": "2026-05-11", "market_experience": "30+ years (est. 1994)", "certification_link": "https://www.fuanna.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "3,000–5,000 pcs", "moq_info": "OBM and OEM lines available; domestic market focus shifting to export"}, {"id": 10, "trade_name": "Diwang Textile", "legal_name": "Gaoyang Diwang Textile Co., Ltd. (高阳县帝旺纺织有限公司)", "factory_locations": "Gaoyang County, Baoding, Hebei Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Located in China's 'textile hometown' (400+ years of history); Flexible MOQ for startups", "product_categories": "Home Textiles", "product_sub_categories": "Combed Cotton Towels; Printed Beach Towels; Luxury Bath Towels; Face Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; BSCI", "regulatory_compliance": "REACH; AZO-free", "brands_worked_with": "EU/US mid-tier brands; hospitality suppliers", "contact_name": "Mr. Li (Sales Director)", "date_created": "2026-05-11", "market_experience": "12+ years", "certification_link": "https://www.diwangtextile.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,000–2,000 pcs/style", "moq_info": "Lower MOQ for beach towels; flexible for startup brands"}, {"id": 11, "trade_name": "Mandarin Home Textile", "legal_name": "Nantong Mandarin Home Textile Co., Ltd. (南通满达林家纺有限公司)", "factory_locations": "Nantong, Jiangsu Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Hotel-grade specialist; Zero-twist/SpunLoop technology; Nantong home textile hub", "product_categories": "Home Textiles", "product_sub_categories": "Hotel Bath Towels; Zero-Twist Towels; Bath Mats; Bathrobes; Bed Linens", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; BSCI; SEDEX; GOTS", "regulatory_compliance": "REACH; CPSIA; CA Prop 65", "brands_worked_with": "TJ Maxx; Marshalls; HomeGoods; TK Maxx (EU); Ritz-Carlton; Four Seasons (Asia)", "contact_name": "Ms. Xu (Export Manager)", "date_created": "2026-05-11", "market_experience": "16+ years", "certification_link": "https://www.mandarinhome.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,500–3,000 pcs/style", "moq_info": "Mid-range MOQ; hotel program flexibility"}, {"id": 12, "trade_name": "Hengan Textile (Fujian)", "legal_name": "Fujian Jinjiang Hengan Textile Co., Ltd. (福建晋江恒安纺织品有限公司)", "factory_locations": "Jinjiang, Quanzhou, Fujian Province, China", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Eco-luxury positioning; Bamboo-fiber and organic cotton specialist; Hengan Group ecosystem", "product_categories": "Home Textiles", "product_sub_categories": "Bamboo Fiber Towels; Organic Cotton Towels; Luxury Bath Towels; Baby Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; ISO 14001; BSCI; GOTS", "regulatory_compliance": "REACH; CPSIA; AZO-free", "brands_worked_with": "Private label for Australian and EU retailers; hotel/hospitality groups", "contact_name": "Mr. Wu (International Sales)", "date_created": "2026-05-11", "market_experience": "20+ years", "certification_link": "https://www.hengantex.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "2,000–3,000 pcs/style", "moq_info": "Good for eco-luxury positioning; AU/EU compliance experienced"}, {"id": 13, "trade_name": "Imabari Towel / Yagi Towel", "legal_name": "Yagi Towel Co., Ltd. (八木タオル株式会社)", "factory_locations": "Imabari, Ehime Prefecture, Japan", "supplier_type": "Manufacturer", "supplier_subtype": "OBM/OEM/ODM", "flags": "Flagship Imabari brand; Imabari Towel Certification mark holder; 5-second absorbency standard", "product_categories": "Home Textiles", "product_sub_categories": "Premium Bath Towels; Hotel Towels; Gift Towels; Gauze Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; Imabari Towel Certification; SEK Mark (antibacterial)", "regulatory_compliance": "JIS (Japanese Industrial Standards); REACH (for EU exports)", "brands_worked_with": "MUJI; Starbucks Japan; Japanese department store private labels", "contact_name": "General Inquiry (Imabari Towel Association)", "date_created": "2026-05-11", "market_experience": "80+ years", "certification_link": "https://www.imabari-towel.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "~1,000 pcs", "moq_info": "Lower MOQ possible for Imabari-certified products; premium pricing"}, {"id": 14, "trade_name": "Shintom Towel", "legal_name": "Shintom Co., Ltd. (新東モール株式会社)", "factory_locations": "Imabari, Ehime Prefecture, Japan", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Very low MOQ (500 pcs); designer-brand OEM; strong design capability", "product_categories": "Home Textiles", "product_sub_categories": "Luxury Bath Towels; Hotel Towels; Gift Towels; Character/Branded Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; ISO 14001; Imabari Towel Certification", "regulatory_compliance": "JIS; REACH", "brands_worked_with": "Disney; Louis Vuitton (licensed goods); Jamie Oliver; Japanese luxury brands", "contact_name": "Sales Department", "date_created": "2026-05-11", "market_experience": "75+ years (est. 1948)", "certification_link": "https://www.shintom.co.jp", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "500–1,000 pcs", "moq_info": "Lowest MOQ among Japanese towel OEMs; excellent for small luxury runs"}, {"id": 15, "trade_name": "Kawashima Selkon Textiles", "legal_name": "Kawashima Selkon Textiles Co., Ltd. (川島織物セルコン株式会社)", "factory_locations": "Kyoto, Japan (not Imabari; heritage textile center)", "supplier_type": "Manufacturer", "supplier_subtype": "OBM/OEM", "flags": "Ultra-luxury hospitality supplier; 180+ year heritage; Kyoto textile tradition", "product_categories": "Home Textiles; Interior Textiles", "product_sub_categories": "Luxury Hotel Towels; Luxury Bathrobes; Curtains; Upholstery; Bed Linens", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001", "regulatory_compliance": "JIS; REACH", "brands_worked_with": "Ritz-Carlton; Aman Resorts; Japanese imperial household; luxury ryokans", "contact_name": "Hospitality Division", "date_created": "2026-05-11", "market_experience": "180+ years (est. 1843)", "certification_link": "https://www.kawashima-selkon.co.jp", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "Negotiable", "moq_info": "MOQ flexible for hospitality clients; premium pricing (Kyoto heritage)"}, {"id": 16, "trade_name": "Hasegawa Towel", "legal_name": "Hasegawa Towel Co., Ltd. (長谷川タオル株式会社)", "factory_locations": "Imabari, Ehime Prefecture, Japan", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Designer-brand OEM; Imabari mark certified; high absorbency", "product_categories": "Home Textiles", "product_sub_categories": "Premium Bath Towels; Luxury Hand Towels; Hotel Collections", "certs_and_audits": "JIS; Imabari Towel Certification; OEKO-TEX Standard 100", "regulatory_compliance": "JIS; REACH", "brands_worked_with": "Ralph Lauren; Hugo Boss (licensed towel programs)", "contact_name": "Export Division", "date_created": "2026-05-11", "market_experience": "78+ years (est. 1946)", "certification_link": "https://www.hasegawa-towel.co.jp", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "~500 pcs", "moq_info": "Very low MOQ for Imabari; suitable for boutique luxury brands"}, {"id": 17, "trade_name": "Senshu Towel", "legal_name": "Senshu Towel Industrial Association (泉州タオル工業組合)", "factory_locations": "Senshu / Izumisano area, Osaka Prefecture, Japan", "supplier_type": "Manufacturer (Association)", "supplier_subtype": "OEM/ODM", "flags": "Historic Japanese towel region (est. ~1887); traditional post-dyeing technique; softer hand-feel", "product_categories": "Home Textiles", "product_sub_categories": "Traditional Japanese Towels; Tenugui; Luxury Bath Towels; Gift Towels", "certs_and_audits": "JIS; Senshu Traditional Mark", "regulatory_compliance": "JIS", "brands_worked_with": "Japanese department stores; traditional gift market; cultural brands", "contact_name": "Senshu Towel Association", "date_created": "2026-05-11", "market_experience": "130+ years (region est. ~1887)", "certification_link": "https://www.senshu-towel.jp", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "Varies by member factory", "moq_info": "Contact association for member factory referrals"}, {"id": 18, "trade_name": "Hakuzo Corporation", "legal_name": "Hakuzo Corporation (白鶴タオル株式会社)", "factory_locations": "Imabari, Ehime Prefecture, Japan", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "University hotel supply specialist; cosmetics branding; diverse OEM capabilities", "product_categories": "Home Textiles; Beauty Textiles", "product_sub_categories": "Hotel Bath Towels; Cosmetics Promotion Towels; Luxury Bath Towels; Gift Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; Imabari Towel Certification", "regulatory_compliance": "JIS; REACH", "brands_worked_with": "Shiseido; Japanese university hotels; cosmetic brands; onsen/sento", "contact_name": "Sales Department", "date_created": "2026-05-11", "market_experience": "88+ years (est. 1936)", "certification_link": "https://www.hakuzo.co.jp", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "500–2,000 pcs", "moq_info": "Flexible for promotional/cosmetic branded towels"}, {"id": 19, "trade_name": "Ichikawa Towel", "legal_name": "Ichikawa Towel Co., Ltd. (市川タオル株式会社)", "factory_locations": "Imabari, Ehime Prefecture, Japan", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Multi-layer gauze specialist; premium baby/luxury towel focus", "product_categories": "Home Textiles", "product_sub_categories": "Multi-Layer Gauze Towels; Baby Towels; Luxury Bath Towels; Soft-Wash Towels", "certs_and_audits": "Imabari Towel Certification; JIS", "regulatory_compliance": "JIS", "brands_worked_with": "Japanese premium baby brands; lifestyle brands; boutique hotels", "contact_name": "General Inquiry", "date_created": "2026-05-11", "market_experience": "77+ years (est. 1947)", "certification_link": "https://www.ichikawa-towel.co.jp", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "~500–1,000 pcs", "moq_info": "Low MOQ suitable for niche luxury and baby market"}, {"id": 20, "trade_name": "Toyo Towel", "legal_name": "Toyo Towel Co., Ltd. (東洋タオル株式会社)", "factory_locations": "Imabari, Ehime Prefecture, Japan", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Major volume OEM for MUJI/Uniqlo; Imabari certified; broad production capability", "product_categories": "Home Textiles", "product_sub_categories": "Premium Bath Towels; Hotel Towels; Quick-Dry Towels; Organic Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; Imabari Towel Certification; JIS", "regulatory_compliance": "JIS; REACH", "brands_worked_with": "MUJI; Uniqlo (luxury lines); Japanese department stores", "contact_name": "Sales Department", "date_created": "2026-05-11", "market_experience": "89+ years (est. 1935)", "certification_link": "https://www.toyo-towel.co.jp", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "~1,000 pcs", "moq_info": "Standard Imabari OEM minimums; premium quality at scale"}, {"id": 21, "trade_name": "Hsing Chong Textile", "legal_name": "Hsing Chong Textile Co., Ltd. (興宗紡織股份有限公司)", "factory_locations": "Huwei Township, Yunlin County, Taiwan", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Historic Yunlin towel cluster; traditional towel maker; survived industry restructuring", "product_categories": "Home Textiles", "product_sub_categories": "Bath Towels; Hotel Towels; Face Towels; Bath Mats", "certs_and_audits": "ISO 9001; OEKO-TEX Standard 100 (pending verification)", "regulatory_compliance": "REACH; Taiwan CNS standards", "brands_worked_with": "Domestic Taiwan brands; Japanese importers; hotel supply chains", "contact_name": "General Manager", "date_created": "2026-05-11", "market_experience": "40+ years", "certification_link": "", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,000–3,000 pcs/style", "moq_info": "Standard for mid-size Taiwan towel factories"}, {"id": 22, "trade_name": "Hwa Fong Textile", "legal_name": "Hwa Fong Textile Co., Ltd. (和豐毛巾實業股份有限公司)", "factory_locations": "Huwei Township, Yunlin County, Taiwan", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Export-oriented Yunlin manufacturer; Japanese department store supplier", "product_categories": "Home Textiles", "product_sub_categories": "Premium Bath Towels; Hotel Towels; Hospitality Collections", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001", "regulatory_compliance": "REACH; AZO-free; Taiwan CNS standards", "brands_worked_with": "Japanese department store brands; domestic premium brands; hotel supply chains", "contact_name": "Sales Director", "date_created": "2026-05-11", "market_experience": "30–40+ years", "certification_link": "", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,000–5,000 pcs", "moq_info": "Depends on product type; hospitality orders flexible"}, {"id": 23, "trade_name": "Feng Hwa Textile", "legal_name": "Feng Hwa Textile Co., Ltd. (豐華紡織股份有限公司)", "factory_locations": "Yunlin County, Taiwan (Huwei/Dounan area)", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Mid-size manufacturer; hospitality and export focus", "product_categories": "Home Textiles", "product_sub_categories": "Bath Towels; Hotel Towels; Face Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001", "regulatory_compliance": "REACH; Taiwan CNS standards", "brands_worked_with": "Japanese hospitality brands; Taiwan domestic premium", "contact_name": "Export Manager", "date_created": "2026-05-11", "market_experience": "20–30+ years", "certification_link": "", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,000–3,000 pcs", "moq_info": "Competitive for mid-to-premium hospitality range"}, {"id": 24, "trade_name": "Ding Shan Towel", "legal_name": "Ding Shan Towel Industrial Co., Ltd. (丁山毛巾實業有限公司)", "factory_locations": "Huwei Township, Yunlin County, Taiwan", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "OEKO-TEX certified; flexible MOQ for premium orders; organic cotton capability", "product_categories": "Home Textiles", "product_sub_categories": "Premium Cotton Towels; Organic Cotton Towels; Hotel-Grade Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; Taiwan MIT Mark", "regulatory_compliance": "REACH; Taiwan CNS standards", "brands_worked_with": "Japanese premium brands; Taiwan hospitality chains; organic/eco-towel brands", "contact_name": "Ms. Ding (Sales)", "date_created": "2026-05-11", "market_experience": "30+ years", "certification_link": "", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "500–2,000 pcs", "moq_info": "Flexible for premium/smaller orders; organic lines available"}, {"id": 25, "trade_name": "CARLI Towel", "legal_name": "CARLI / 朵法毛巾 (parent manufacturing company in Yunlin)", "factory_locations": "Yunlin County, Taiwan (Huwei area)", "supplier_type": "Manufacturer", "supplier_subtype": "OBM/OEM/ODM", "flags": "Most recognized premium Taiwan towel brand; OEKO-TEX + SGS tested; MIT certified; luxury retail positioning", "product_categories": "Home Textiles", "product_sub_categories": "Luxury Bath Towels; Organic Cotton Towels; Hotel Towels; Gift Towels; Baby Towels", "certs_and_audits": "OEKO-TEX Standard 100; SGS Tested; Taiwan MIT (Made in Taiwan) Mark", "regulatory_compliance": "REACH; Taiwan CNS standards; CA Prop 65", "brands_worked_with": "CARLI own-brand (Taiwan premium retail); Japanese and SE Asian hospitality clients", "contact_name": "Brand / Export Team", "date_created": "2026-05-11", "market_experience": "15–20 years (brand); factory heritage longer", "certification_link": "https://www.carli.com.tw", "ip_ownership": "CARLI brand owned", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "500–3,000 pcs", "moq_info": "Low MOQ for boutique/luxury orders; own brand retail also available"}, {"id": 26, "trade_name": "Hong Yi Towel", "legal_name": "Hong Yi Towel Factory (宏益毛巾工廠)", "factory_locations": "Huwei Township, Yunlin County, Taiwan", "supplier_type": "Manufacturer", "supplier_subtype": "OEM", "flags": "Traditional jacquard towel maker; part of Yunlin tourism factory cluster; MIT certified", "product_categories": "Home Textiles", "product_sub_categories": "Jacquard Towels; Bath Towels; Face Towels; Traditional Taiwanese Towels", "certs_and_audits": "Taiwan MIT Certification Mark; OEKO-TEX Standard 100 (export lines)", "regulatory_compliance": "Taiwan CNS standards; REACH (for EU exports)", "brands_worked_with": "Domestic Taiwan brands; Japanese importers; tourism/heritage market", "contact_name": "Factory Manager", "date_created": "2026-05-11", "market_experience": "30+ years", "certification_link": "", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,000–5,000 pcs", "moq_info": "Standard for traditional jacquard towel production"}, {"id": 27, "trade_name": "Phong Phu Corporation", "legal_name": "Phong Phu Joint Stock Company (Công ty Cổ phần Phong Phú)", "factory_locations": "Tan Binh District, Ho Chi Minh City, Vietnam", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Largest Vietnamese textile company; publicly listed; SA8000 social accountability", "product_categories": "Home Textiles; Apparel Fabrics", "product_sub_categories": "Terry Towels; Bath Towels; Bath Mats; Beach Towels; Bed Linens; Fabrics", "certs_and_audits": "ISO 9001:2015; ISO 14001; OEKO-TEX Standard 100; SA8000", "regulatory_compliance": "REACH; CPSIA; Vietnam EVFTA compliance", "brands_worked_with": "Vietnamese hotel chains; hospital networks; exports to Japan/EU/US", "contact_name": "Export Department", "date_created": "2026-05-11", "market_experience": "50+ years (est. 1964)", "certification_link": "https://phongphu.com.vn", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "3,000–5,000 pcs", "moq_info": "Higher volume typical for large-scale manufacturer"}, {"id": 28, "trade_name": "Bros Vietnam / Eins Clothing", "legal_name": "Eins Clothing Co., Ltd. (Công ty TNHH Eins Clothing)", "factory_locations": "Ho Chi Minh City / Binh Duong Province, Vietnam", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Low MOQ (500 pcs); OEKO-TEX + BSCI + WRAP; hotel/hospitality focus", "product_categories": "Home Textiles", "product_sub_categories": "Luxury Bath Towels; Hand Towels; Face Towels; Bath Mats; Beach Towels; Kitchen Towels; Microfiber", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001:2015; BSCI; WRAP", "regulatory_compliance": "REACH; CPSIA; EVFTA compliance", "brands_worked_with": "Asia-Pacific hotel chains; European and Japanese private label brands", "contact_name": "Sales Department", "date_created": "2026-05-11", "market_experience": "15+ years", "certification_link": "https://brostowel.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "500–1,000 pcs/color/style", "moq_info": "Very competitive low MOQ for hotel/hospitality luxury towels"}, {"id": 29, "trade_name": "Spring Home Textile", "legal_name": "Spring Home Co., Ltd. (Công ty TNHH Spring Home)", "factory_locations": "Ho Chi Minh City / Binh Duong Province, Vietnam", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "4-5 star hotel specialist; lowest MOQ in Vietnam (300 pcs); resort/spa focus", "product_categories": "Home Textiles", "product_sub_categories": "Hotel Bath Towels; Face Towels; Bath Mats; Bathrobes; Bed Linens; Pillow Covers", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; BSCI", "regulatory_compliance": "REACH; EVFTA compliance", "brands_worked_with": "4-5 star hotels in Vietnam and SE Asia; resort chains", "contact_name": "Export Manager", "date_created": "2026-05-11", "market_experience": "10+ years", "certification_link": "https://springhome.vn", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "300–500 pcs/item", "moq_info": "Lowest MOQ in SE Asia; ideal for boutique hotel/resort orders"}, {"id": 30, "trade_name": "Viet Thang Textile", "legal_name": "Viet Thang Textile Joint Stock Company (Công ty Cổ phần Dệt May Việt Thắng)", "factory_locations": "Dang Hai Ward, Hai An District, Hai Phong City, Vietnam", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Major state-origin textile company; ISO 14001 environmental; high-volume", "product_categories": "Home Textiles; Apparel Fabrics", "product_sub_categories": "Terry Towels; Bath Towels; Woven Fabrics; Yarn-Dyed Fabrics; Home Textiles", "certs_and_audits": "ISO 9001:2015; ISO 14001; OEKO-TEX Standard 100", "regulatory_compliance": "REACH; EVFTA compliance", "brands_worked_with": "Domestic hotel chains; exports to Japan/Korea/EU", "contact_name": "International Sales", "date_created": "2026-05-11", "market_experience": "50+ years (est. 1969)", "certification_link": "https://vietthang.com.vn", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "5,000+ pcs", "moq_info": "Higher volume typical; better for large-scale programs"}, {"id": 31, "trade_name": "GHT Vietnam", "legal_name": "GHT Vietnam Co., Ltd. (Công ty TNHH GHT Vietnam)", "factory_locations": "Ho Chi Minh City / Dong Nai Province, Vietnam", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "EU hotel + Japanese onsen specialist; WRAP certified; diverse towel range", "product_categories": "Home Textiles", "product_sub_categories": "Hotel Bath Towels; Hand Towels; Face Towels; Bath Mats; Kitchen Towels; Microfiber Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; BSCI; WRAP", "regulatory_compliance": "REACH; CPSIA; EVFTA compliance", "brands_worked_with": "EU hotel chains; Japanese onsen/sento suppliers; US private label brands", "contact_name": "Sales Team", "date_created": "2026-05-11", "market_experience": "12+ years", "certification_link": "https://ghtvietnam.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,000–2,000 pcs", "moq_info": "Good balance of MOQ and quality; ideal for European hotel programs"}, {"id": 32, "trade_name": "PT Sandratex Makmur", "legal_name": "PT Sandratex Makmur", "factory_locations": "Bandung, West Java, Indonesia", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Long-established Indonesian towel manufacturer; Japanese/EU department store supplier; BSCI", "product_categories": "Home Textiles", "product_sub_categories": "Bath Towels; Hand Towels; Face Towels; Wash Cloths; Bath Mats; Beach Towels; Kitchen Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001:2015; BSCI", "regulatory_compliance": "REACH; Indonesian SNI standards; EU compliance", "brands_worked_with": "Japanese and European department stores; hotel supply chains; OEM/private label", "contact_name": "Export Manager", "date_created": "2026-05-11", "market_experience": "30+ years", "certification_link": "https://sandratex.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,000–2,000 pcs/style", "moq_info": "Standard Indonesian mid-size factory MOQ"}, {"id": 33, "trade_name": "PT Tyfountex Indonesia Tbk", "legal_name": "PT Tyfountex Indonesia Tbk", "factory_locations": "Solo (Surakarta), Central Java, Indonesia", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Publicly listed on IDX; GOTS organic certified; European luxury brand supplier; vertically integrated", "product_categories": "Home Textiles; Apparel Fabrics", "product_sub_categories": "Terry Towels; Bath Towels; Beach Towels; Bathrobes; Bed Linens; Knitted Fabrics", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; ISO 14001; BSCI; GOTS", "regulatory_compliance": "REACH; Indonesian SNI; EU compliance", "brands_worked_with": "European luxury brands; Japanese retailers; US department stores", "contact_name": "Marketing Department", "date_created": "2026-05-11", "market_experience": "40+ years (est. 1975)", "certification_link": "https://tyfountex.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "2,000–5,000 pcs", "moq_info": "Higher volume typical for publicly listed manufacturer; GOTS organic lines available"}, {"id": 34, "trade_name": "PT Indah Jaya Textile Industry", "legal_name": "PT Indah Jaya Textile Industry", "factory_locations": "Bandung, West Java, Indonesia", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "GOTS organic certified; Japanese/EU market specialist; yoga/wellness towel lines", "product_categories": "Home Textiles", "product_sub_categories": "Bath Towels; Hand Towels; Wash Cloths; Bath Mats; Beach Towels; Bathrobes; Yoga Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; GOTS", "regulatory_compliance": "REACH; Indonesian SNI; EU compliance", "brands_worked_with": "Japanese department stores; EU hotel suppliers; OEM for global brands", "contact_name": "Export Division", "date_created": "2026-05-11", "market_experience": "40+ years", "certification_link": "https://indahjaya.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,000+ pcs", "moq_info": "Flexible for organic/luxury lines; good for eco-luxury positioning"}, {"id": 35, "trade_name": "Apac Inti Corona", "legal_name": "PT Apac Inti Corona Tbk", "factory_locations": "Semarang, Central Java, Indonesia", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Publicly listed (IDX); highest volume capacity; WRAP + BSCI; large-scale hotel supply", "product_categories": "Home Textiles; Apparel Fabrics; Garments", "product_sub_categories": "Terry Towels; Bath Towels; Woven Fabrics; Circular Knits; Garments; Home Textiles", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; ISO 14001; BSCI; WRAP", "regulatory_compliance": "REACH; CPSIA; Indonesian SNI", "brands_worked_with": "Major US and EU apparel/home textile brands; hotel supply chains", "contact_name": "Corporate Communications", "date_created": "2026-05-11", "market_experience": "30+ years", "certification_link": "https://apacinticorona.com", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "5,000+ pcs", "moq_info": "Best for high-volume programs; largest capacity in Indonesia"}, {"id": 36, "trade_name": "Saha Union Public Company", "legal_name": "Saha Union Public Company Limited", "factory_locations": "Bangkok / Samut Prakan, Thailand", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Major Thai conglomerate; SET-listed; diverse textile production including towels; BSCI", "product_categories": "Home Textiles; Apparel; Socks", "product_sub_categories": "Terry Towels; Bath Towels; Face Towels; Bath Mats; Socks; Garments", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001; ISO 14001; BSCI", "regulatory_compliance": "REACH; Thai TIS standards", "brands_worked_with": "Thai hotel chains; Japanese retailers; OEM for international brands", "contact_name": "Textile Division", "date_created": "2026-05-11", "market_experience": "50+ years (est. 1972)", "certification_link": "https://www.sahaunion.co.th", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "2,000–5,000 pcs", "moq_info": "Standard for large conglomerate; towel is one division among many"}, {"id": 37, "trade_name": "Cotton House (Thailand)", "legal_name": "Cotton House (Thailand) Co., Ltd.", "factory_locations": "Samut Sakhon / Bangkok area, Thailand", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "Luxury hotel/spa specialist; low MOQ (500 pcs); Thai resort market focus", "product_categories": "Home Textiles", "product_sub_categories": "Luxury Bath Towels; Hand Towels; Bath Mats; Bathrobes; Spa Towels; Pool Towels", "certs_and_audits": "OEKO-TEX Standard 100; ISO 9001", "regulatory_compliance": "REACH; Thai TIS standards", "brands_worked_with": "Thai luxury hotels and resorts; spa chains; export to Japan/EU", "contact_name": "Sales Manager", "date_created": "2026-05-11", "market_experience": "20+ years", "certification_link": "https://cottonhouse.co.th", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "500–1,000 pcs", "moq_info": "Very low MOQ ideal for luxury boutique hotel/resort orders"}, {"id": 38, "trade_name": "Liong Mah Textiles", "legal_name": "Liong Mah Textiles Sdn Bhd", "factory_locations": "Penang / Selangor, Malaysia", "supplier_type": "Manufacturer", "supplier_subtype": "OEM/ODM", "flags": "ASEAN hotel/resort supplier; Malaysia's significant towel manufacturer; ISO 9001", "product_categories": "Home Textiles", "product_sub_categories": "Bath Towels; Hand Towels; Face Towels; Bath Mats; Table Linens; Bed Linens", "certs_and_audits": "ISO 9001; OEKO-TEX Standard 100 (pending)", "regulatory_compliance": "REACH; Malaysian MS standards", "brands_worked_with": "Malaysian and Singaporean hotel chains; ASEAN resort operators", "contact_name": "General Manager", "date_created": "2026-05-11", "market_experience": "25+ years", "certification_link": "https://liongmah.com.my", "ip_ownership": "", "nda_link": "", "nda_start": "", "non_circumvent_period_months": null, "agreement_link": "", "agreement_notes": "", "term_notes": "", "date_outreached": "", "date_qualified": "", "moq": "1,000–3,000 pcs", "moq_info": "Standard for Malaysian mid-size textile manufacturer"}][];
+const FLAGS = {China:'🇨🇳',Japan:'🇯🇵',Taiwan:'🇹🇼',Vietnam:'🇻🇳',Indonesia:'🇮🇩',Thailand:'🇹🇭',Malaysia:'🇲🇾'};
+const TAG_CLASSES = {China:'tag-cn',Japan:'tag-jp',Taiwan:'tag-tw',Vietnam:'tag-vn',Indonesia:'tag-id',Thailand:'tag-th',Malaysia:'tag-my'};
+
+function getRegion(loc) {
+  for (const r of ['China','Japan','Taiwan','Vietnam','Indonesia','Thailand','Malaysia']) {
+    if (loc.includes(r)) return r;
+  }
+  return 'Other';
+}
+
+function certTags(s) {
+  if (!s) return '';
+  return s.split(';').map(c => {
+    c = c.trim();
+    const cls = c.includes('GOTS') ? 'cert-gots' : 'cert-tag';
+    return `<span class="${cls}">${c}</span>`;
+  }).join('');
+}
+
+let currentFilter = 'all';
+let searchTerm = '';
+
+function render() {
+  let filtered = DATA;
+  if (currentFilter !== 'all') {
+    filtered = filtered.filter(s => getRegion(s.factory_locations) === currentFilter);
+  }
+  if (searchTerm) {
+    const q = searchTerm.toLowerCase();
+    filtered = filtered.filter(s =>
+      (s.trade_name||'').toLowerCase().includes(q) ||
+      (s.legal_name||'').toLowerCase().includes(q) ||
+      (s.factory_locations||'').toLowerCase().includes(q) ||
+      (s.brands_worked_with||'').toLowerCase().includes(q) ||
+      (s.certs_and_audits||'').toLowerCase().includes(q)
+    );
+  }
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = filtered.map(s => {
+    const region = getRegion(s.factory_locations);
+    const flag = FLAGS[region]||'';
+    const tc = TAG_CLASSES[region]||'';
+    return `<tr data-id="${s.id}" onclick="openModal(${s.id})" style="cursor:pointer">
+      <td>${s.id}</td>
+      <td><strong>${s.trade_name||''}</strong></td>
+      <td><span class="tag ${tc}">${flag} ${region}</span></td>
+      <td><span class="subtype-badge">${s.supplier_subtype||s.supplier_type||''}</span></td>
+      <td>${certTags(s.certs_and_audits)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${s.brands_worked_with||''}</td>
+      <td>${s.contact_name||''}</td>
+      <td><span class="moq-highlight">${s.moq||''}</span></td>
+      <td>${s.market_experience||''}</td>
+    </tr>`;
+  }).join('');
+
+  // Stats
+  const statsEl = document.getElementById('stats');
+  const regionCounts = {};
+  filtered.forEach(s => { const r = getRegion(s.factory_locations); regionCounts[r] = (regionCounts[r]||0)+1; });
+  statsEl.innerHTML = `<span class="stat-pill"><strong>${filtered.length}</strong> suppliers</span>` +
+    Object.entries(regionCounts).map(([r,c]) => `<span class="stat-pill">${FLAGS[r]||''} <strong>${c}</strong> ${r}</span>`).join('');
+}
+
+function openModal(id) {
+  const s = DATA.find(x => x.id === id);
+  if (!s) return;
+  const region = getRegion(s.factory_locations);
+  const flag = FLAGS[region]||'';
+  const fields = [
+    ['Factory Locations', s.factory_locations],
+    ['Supplier Type', s.supplier_type],
+    ['Supplier Subtype', s.supplier_subtype],
+    ['Flags', s.flags],
+    ['Product Categories', s.product_categories],
+    ['Product Sub Categories', s.product_sub_categories],
+    ['Certifications & Audits', s.certs_and_audits],
+    ['Regulatory Compliance', s.regulatory_compliance],
+    ['Brands Worked With', s.brands_worked_with],
+    ['Contact Name', s.contact_name],
+    ['Market Experience', s.market_experience],
+    ['Certification Link', s.certification_link ? `<a href="${s.certification_link}" target="_blank">${s.certification_link}</a>` : ''],
+    ['IP Ownership', s.ip_ownership],
+    ['NDA Link', s.nda_link],
+    ['NDA Start', s.nda_start],
+    ['Non-Circumvent (months)', s.non_circumvent_period_months],
+    ['Agreement Link', s.agreement_link],
+    ['Agreement Notes', s.agreement_notes],
+    ['Term Notes', s.term_notes],
+    ['Date Created', s.date_created],
+    ['Date Outreached', s.date_outreached],
+    ['Date Qualified', s.date_qualified],
+    ['MOQ', s.moq],
+    ['MOQ Info', s.moq_info],
+  ];
+  const html = `<div class="modal-header">
+    <div><h2>${flag} ${s.trade_name||''}</h2><div class="legal">${s.legal_name||''}</div></div>
+    <button class="close-btn" onclick="closeModal()">✕</button>
+  </div>
+  <div class="modal-body">
+    ${fields.map(([label, value]) => `<div class="field">
+      <div class="field-label">${label}</div>
+      <div class="field-value">${value||'—'}</div>
+    </div>`).join('')}
+  </div>`;
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    render();
+  });
+});
+
+document.getElementById('searchBox').addEventListener('input', e => {
+  searchTerm = e.target.value;
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atelier — Agentic Growth System</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:#fff;color:#000;overflow-x:hidden}
+
+/* ===== LANDING ===== */
+.landing{padding:64px 80px;min-height:100vh}
+.landing-title{font-size:24px;font-weight:700;letter-spacing:-.4px;margin-bottom:4px}
+.landing-subtitle{font-size:13px;font-weight:400;color:rgba(0,0,0,.45);margin-bottom:56px}
+.section-label{font-size:14px;font-weight:600;margin-bottom:24px}
+
+/* Cards — narrow vertical, matching reference */
+.card-stack{display:flex;flex-direction:column;gap:16px;width:320px}
+.cap-card{border-radius:14px;overflow:hidden;cursor:pointer;transition:all .2s;border:1px solid rgba(0,0,0,.06)}
+.cap-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.1)}
+.cap-card:active{transform:translateY(0)}
+.cap-img{width:100%;height:240px;object-fit:cover;display:block;background:#f0f0f0}
+.cap-body{background:#000;padding:20px 22px 22px}
+.cap-pill{display:inline-block;font-size:11px;font-weight:500;padding:5px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.25);color:#fff;margin-bottom:14px}
+.cap-name{font-size:16px;font-weight:500;color:#fff;margin-bottom:6px;letter-spacing:-.2px}
+.cap-desc{font-size:12px;font-weight:400;color:#fff;line-height:1.5;margin-bottom:10px;opacity:1}
+.cap-cta{font-size:11px;font-weight:400;color:rgba(255,255,255,.5)}
+
+/* New card */
+.new-card{width:320px;border-radius:14px;border:1.5px dashed rgba(0,0,0,.12);padding:44px 32px;text-align:center;cursor:pointer;transition:all .2s}
+.new-card:hover{border-color:rgba(0,0,0,.25);background:rgba(0,0,0,.01)}
+.new-card .plus{font-size:28px;color:rgba(0,0,0,.15);margin-bottom:8px}
+.new-card .label{font-size:12px;font-weight:500;color:rgba(0,0,0,.35)}
+
+/* ===== FLOW VIEW ===== */
+.flow-view{display:none;min-height:100vh}
+.flow-view.active{display:block;background:#111}
+
+.flow-header{padding:18px 80px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:rgba(17,17,17,.95);backdrop-filter:blur(12px);z-index:100}
+.flow-back{font-size:12px;font-weight:500;cursor:pointer;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:6px;border:none;background:none;padding:0;transition:color .15s}
+.flow-back:hover{color:#fff}
+.flow-title{font-size:15px;font-weight:700;letter-spacing:-.2px;color:#fff}
+.flow-actions{display:flex;gap:8px}
+.flow-btn{padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:transparent;color:#fff;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+.flow-btn:hover{background:rgba(255,255,255,.04)}
+.flow-btn.primary{background:#fff;color:#000;border-color:#fff}
+.flow-btn.primary:hover{opacity:.85}
+
+/* Metrics */
+.metrics{display:flex;gap:16px;padding:14px 80px;border-bottom:1px solid rgba(255,255,255,.06);overflow-x:auto;background:#111}
+.m{min-width:100px;flex-shrink:0}
+.m-label{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.3);font-weight:600;margin-bottom:1px}
+.m-val{font-size:22px;font-weight:700;letter-spacing:-.5px;color:#fff}
+.m-sub{font-size:10px;color:rgba(255,255,255,.3)}
+
+/* View tabs */
+.vtabs{display:flex;gap:0;padding:0 80px;border-bottom:1px solid rgba(255,255,255,.06);background:#111}
+.vt{padding:10px 16px;font-size:11px;font-weight:500;color:rgba(255,255,255,.3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.vt:hover{color:rgba(255,255,255,.6)}
+.vt.active{color:#fff;border-bottom-color:#fff;font-weight:600}
+
+/* Pipeline */
+.pipe{display:flex;gap:12px;padding:14px 80px;overflow-x:auto;min-height:calc(100vh - 200px);background:#111}
+.p-col{min-width:210px;max-width:250px;flex:1;display:flex;flex-direction:column}
+.p-head{padding:8px 12px;font-size:11px;font-weight:600;display:flex;justify-content:space-between;align-items:center;border-radius:8px 8px 0 0}
+.p-cnt{font-size:10px;font-weight:600;padding:2px 7px;border-radius:8px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.5)}
+.p-cards{flex:1;padding:6px 0;display:flex;flex-direction:column;gap:6px;overflow-y:auto;max-height:calc(100vh - 280px)}
+.p-card{background:#1a1a1a;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;cursor:pointer;transition:all .15s}
+.p-card:hover{border-color:rgba(255,255,255,.15);box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.p-name{font-size:12px;font-weight:600;margin-bottom:3px;color:#fff}
+.p-meta{font-size:10px;color:rgba(255,255,255,.4);display:flex;gap:8px}
+.p-bars{display:flex;gap:6px;margin-top:6px}
+.p-bar{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
+.p-fill{height:100%;border-radius:2px}
+.p-chip{font-size:9px;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);margin-top:5px;display:inline-block}
+
+/* Funnel */
+.funnel{padding:28px 80px;display:flex;flex-direction:column;align-items:center;min-height:calc(100vh - 200px);background:#111}
+.f-row{display:flex;align-items:center;margin:3px 0;cursor:pointer;transition:all .15s}
+.f-row:hover{transform:scale(1.01)}
+.f-bar{height:44px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;min-width:90px;transition:width .3s}
+.f-info{margin-left:14px}
+.f-lbl{font-size:12px;font-weight:600;color:#fff}
+.f-drop{font-size:10px;color:rgba(255,255,255,.3)}
+
+/* Workflow */
+.wflow{padding:28px 80px;display:flex;justify-content:center;min-height:calc(100vh - 200px);background:#111}
+.wf-col{display:flex;flex-direction:column;align-items:center;gap:0}
+.wf-phase{width:240px;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;cursor:pointer;transition:all .15s;background:#1a1a1a}
+.wf-phase:hover{border-color:rgba(255,255,255,.2);background:#222}
+.wf-ptitle{font-size:12px;font-weight:700;margin-bottom:5px;color:#fff}
+.wf-steps{font-size:10px;color:rgba(255,255,255,.4);line-height:1.7}
+.wf-steps li{margin-left:12px}
+.wf-arr{font-size:16px;color:rgba(255,255,255,.15);padding:3px 0}
+
+/* Table */
+.tbl-wrap{padding:14px 80px;overflow-x:auto;background:#111}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:7px 10px;text-align:left;border-bottom:2px solid rgba(255,255,255,.08);font-size:9px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:rgba(255,255,255,.35);position:sticky;top:0;background:#111}
+td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.7)}
+tr:hover td{background:rgba(255,255,255,.02)}
+tr{cursor:pointer}
+.ctag{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:600}
+.ct-v{background:rgba(34,197,94,.08);color:#16a34a}
+.ct-c{background:rgba(245,158,11,.08);color:#d97706}
+.ct-u{background:rgba(239,68,68,.05);color:#dc2626}
+
+/* Modal */
+.mbg{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:none;z-index:300;justify-content:center;align-items:center}
+.mbg.show{display:flex}
+.mbox{background:#111;border-radius:14px;width:92%;max-width:720px;max-height:90vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.1) transparent}
+.mbox::-webkit-scrollbar{width:5px}
+.mbox::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:5px}
+.mtop{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#111;z-index:1}
+.mtop h2{font-size:15px;font-weight:700;letter-spacing:-.2px;color:#fff}
+.mx{background:none;border:none;font-size:16px;color:rgba(255,255,255,.4);cursor:pointer}
+.minner{padding:20px}
+.ms{margin-bottom:16px}
+.ms h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.35);margin-bottom:8px}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mfl{font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:rgba(255,255,255,.3);margin-bottom:1px}
+.mfv{font-size:12px;font-weight:500;color:#fff}
+.mfv.e{color:rgba(255,255,255,.2);font-style:italic}
+
+/* Actions */
+.act-row{display:flex;flex-wrap:wrap;gap:6px}
+.ab{padding:7px 13px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;border:1px solid rgba(255,255,255,.12);background:transparent;color:#fff}
+.ab:hover{background:rgba(255,255,255,.05)}
+.ab.go{background:#fff;color:#000;border-color:#fff}
+.ab.go:hover{opacity:.85}
+.ab.no{color:#f87171;border-color:rgba(248,113,113,.3)}
+.ab.wa{color:#fbbf24;border-color:rgba(251,191,36,.3)}
+
+/* Conversation */
+.cvbox{margin-top:8px;border:1px solid rgba(255,255,255,.08);border-radius:10px;overflow:hidden;background:#1a1a1a}
+.cvhead{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;align-items:center;background:#1a1a1a}
+.cvht{font-size:11px;font-weight:600;color:rgba(255,255,255,.4)}
+.cvch{font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.4)}
+.cvbody{padding:12px;max-height:320px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.08) transparent;background:#1a1a1a}
+.cvbody::-webkit-scrollbar{width:3px}
+.cvbody::-webkit-scrollbar-thumb{background:rgba(0,0,0,.08);border-radius:3px}
+.cm{display:flex;gap:7px;margin-bottom:10px;align-items:flex-start}
+.cm.out{flex-direction:row-reverse}
+.ca{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.cm.out .ca{background:rgba(255,255,255,.08)}
+.cm.in .ca{background:rgba(255,255,255,.04)}
+.cb{max-width:76%;padding:7px 10px;border-radius:8px;font-size:11px;line-height:1.5;word-break:break-word}
+.cm.out .cb{background:#fff;color:#000}
+.cm.in .cb{background:#222;border:1px solid rgba(255,255,255,.08);color:#fff}
+.cmm{display:flex;justify-content:space-between;align-items:center;margin-top:2px}
+.ctm{font-size:9px;color:rgba(255,255,255,.25)}
+.cac{font-size:8px;padding:1px 4px;border-radius:2px;background:rgba(255,255,255,.05);font-weight:600;color:rgba(255,255,255,.4)}
+
+/* Translation toggle */
+.trb{font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.12);background:transparent;color:rgba(255,255,255,.4);cursor:pointer;transition:all .12s;font-weight:500}
+.trb:hover{background:rgba(255,255,255,.04)}
+.trb.on{background:#fff;color:#000;border-color:#fff}
+.ctr{margin-top:4px;padding:5px 8px;border-radius:5px;background:rgba(59,130,246,.08);border:1px dashed rgba(59,130,246,.2);font-size:10px;line-height:1.4;color:#60a5fa;display:none}
+.ctr.vis{display:block}
+.ctrl{font-size:7px;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.3);margin-bottom:1px;font-weight:600}
+
+/* Suggest + compose */
+.csg{margin-top:5px;padding:7px 10px;border:1px dashed rgba(255,255,255,.1);border-radius:5px;background:rgba(255,255,255,.02)}
+.csgl{font-size:8px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.3px;font-weight:600;margin-bottom:3px}
+.csgc{display:flex;flex-wrap:wrap;gap:3px}
+.csgch{padding:3px 7px;border-radius:4px;font-size:10px;border:1px solid rgba(255,255,255,.1);cursor:pointer;transition:all .1s;background:rgba(255,255,255,.05);color:rgba(255,255,255,.7)}
+.csgch:hover{border-color:rgba(255,255,255,.2)}
+.ccbar{padding:7px 10px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:5px;background:#1a1a1a}
+.ccinput{flex:1;padding:5px 9px;border-radius:5px;border:1px solid rgba(255,255,255,.12);background:#222;color:#fff;font-size:11px;outline:none;font-family:inherit}
+.ccinput:focus{border-color:rgba(255,255,255,.3)}
+.ccsend{padding:5px 12px;border-radius:5px;background:#fff;color:#000;border:none;font-size:11px;font-weight:600;cursor:pointer}
+.ccsend:hover{opacity:.85}
+
+/* Wizard */
+.ws{margin-bottom:16px}
+.ws h4{font-size:12px;font-weight:700;margin-bottom:8px}
+.wo{padding:10px 14px;border:1px solid rgba(0,0,0,.06);border-radius:8px;margin-bottom:5px;cursor:pointer;transition:all .12s;font-size:12px;display:flex;align-items:center;gap:8px}
+.wo:hover{border-color:rgba(0,0,0,.15);background:rgba(0,0,0,.01)}
+.wo.sel{border-color:#000;background:rgba(0,0,0,.03);font-weight:600}
+.winp{width:100%;padding:8px 12px;border-radius:6px;border:1px solid rgba(0,0,0,.08);font-size:12px;outline:none;font-family:inherit}
+.winp:focus{border-color:rgba(0,0,0,.2)}
+.wtags{display:flex;flex-wrap:wrap;gap:5px}
+.wtag{padding:4px 10px;border-radius:5px;font-size:10px;border:1px solid rgba(0,0,0,.06);cursor:pointer;transition:all .1s;font-weight:500}
+.wtag:hover,.wtag.sel{border-color:#000;background:rgba(0,0,0,.04);font-weight:600}
+.wlaunch{width:100%;padding:11px;border-radius:8px;background:#000;color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer}
+.wlaunch:hover{opacity:.85}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.cap-card{animation:fadeUp .25s ease both}
+.cap-card:nth-child(2){animation-delay:.04s}
+.cap-card:nth-child(3){animation-delay:.08s}
+
+@media(max-width:768px){
+  .landing,.flow-header,.metrics,.vtabs,.pipe,.funnel,.wflow,.tbl-wrap{padding-left:20px!important;padding-right:20px!important}
+  .card-stack{width:100%}
+  .mg{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LANDING ===== -->
+<div class="landing" id="landing">
+  <div class="landing-title">Atelier</div>
+  <div class="landing-subtitle">Agentic Growth System — Autonomous supplier discovery, outreach & engagement</div>
+  <div class="section-label">Current Capability Searches</div>
+  <div class="card-stack" id="card-stack"></div>
+  <div style="margin-top:16px">
+    <div class="new-card" onclick="openWiz()">
+      <div class="plus">+</div>
+      <div class="label">New Capability Search</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FLOW VIEW ===== -->
+<div class="flow-view" id="flow-view">
+  <div class="flow-header">
+    <button class="flow-back" onclick="goBack()">← Back</button>
+    <div class="flow-title" id="ftitle"></div>
+    <div class="flow-actions">
+      <button class="flow-btn" onclick="agent('enrich')">⚡ Enrich All</button>
+      <button class="flow-btn" onclick="agent('outreach')">📧 Send Outreach</button>
+      <button class="flow-btn primary" onclick="agent('full')">🚀 Run Full Pipeline</button>
+    </div>
+  </div>
+  <div class="metrics" id="metrics"></div>
+  <div class="vtabs">
+    <div class="vt active" data-v="pipe" onclick="sv('pipe')">Pipeline</div>
+    <div class="vt" data-v="funnel" onclick="sv('funnel')">Funnel</div>
+    <div class="vt" data-v="wflow" onclick="sv('wflow')">Workflow</div>
+    <div class="vt" data-v="tbl" onclick="sv('tbl')">Table</div>
+  </div>
+  <div id="v-pipe" class="pipe"></div>
+  <div id="v-funnel" class="funnel" style="display:none"></div>
+  <div id="v-wflow" class="wflow" style="display:none"></div>
+  <div id="v-tbl" class="tbl-wrap" style="display:none"></div>
+</div>
+
+<!-- Modal -->
+<div class="mbg" id="modal" onclick="if(event.target===this)closeM()">
+  <div class="mbox" id="mbox"></div>
+</div>
+
+<!-- Wizard -->
+<div class="mbg" id="wmodal" onclick="if(event.target===this)closeW()">
+  <div class="mbox" id="wbox" style="max-width:480px"></div>
+</div>
+
+<div id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:9px 20px;border-radius:8px;background:#000;color:#fff;font-size:12px;font-weight:600;opacity:0;transition:opacity .3s;z-index:500;pointer-events:none"></div>
+
+<script>
+/* DATA_PLACEHOLDER */
+
+let curFlow = null;
+
+/* ===== LANDING ===== */
+function renderLanding() {
+  const el = document.getElementById('card-stack');
+  let h = '';
+  FLOWS.forEach(f => {
+    const onboarded = f.supplier_ids.length;
+    h += `<div class="cap-card" onclick="openFlow('${f.id}')">
+      <img class="cap-img" src="${f.image}" alt="${f.name}" loading="lazy">
+      <div class="cap-body">
+        <div class="cap-pill">${onboarded} out of ${f.total_target} suppliers onboarded</div>
+        <div class="cap-name">${f.name}</div>
+        <div class="cap-desc">${f.description}</div>
+        <div class="cap-cta">Click for funnel</div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = h;
+}
+
+function openFlow(id) {
+  curFlow = FLOWS.find(f => f.id === id);
+  if (!curFlow) return;
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('flow-view').classList.add('active');
+  document.getElementById('ftitle').textContent = curFlow.full_name || curFlow.name;
+  renderFlow();
+}
+
+function goBack() {
+  curFlow = null;
+  document.getElementById('flow-view').classList.remove('active');
+  document.getElementById('landing').style.display = '';
+}
+
+/* ===== FLOW ===== */
+function fData() {
+  return curFlow ? DATA.filter(s => curFlow.supplier_ids.includes(s.id)) : [];
+}
+
+function renderFlow() {
+  renderMetrics();
+  renderPipe();
+  renderFunnel();
+  renderWflow();
+  renderTbl();
+}
+
+function renderMetrics() {
+  const ss = fData();
+  const en = ss.filter(s => ['ENRICHED','OUTREACH_SENT','CONVERSING','QUALIFIED','HUMAN_HANDOFF'].includes(s.outreach_state)).length;
+  const ou = ss.filter(s => ['OUTREACH_SENT','CONVERSING','QUALIFIED','HUMAN_HANDOFF'].includes(s.outreach_state)).length;
+  const qu = ss.filter(s => ['QUALIFIED','HUMAN_HANDOFF'].includes(s.outreach_state)).length;
+  const aq = ss.length ? Math.round(ss.reduce((a,s)=>a+(s.qualification_score||0),0)/ss.length) : 0;
+  const ac = ss.length ? Math.round(ss.reduce((a,s)=>a+(s.data_completeness_score||0),0)/ss.length) : 0;
+  const ms = ss.reduce((a,s) => a + (CONVOS[s.id]?CONVOS[s.id].length:0), 0);
+  document.getElementById('metrics').innerHTML = `
+    <div class="m"><div class="m-label">Total</div><div class="m-val">${ss.length}</div></div>
+    <div class="m"><div class="m-label">Enriched</div><div class="m-val">${en}</div></div>
+    <div class="m"><div class="m-label">Outreached</div><div class="m-val">${ou}</div></div>
+    <div class="m"><div class="m-label">Qualified</div><div class="m-val">${qu}</div></div>
+    <div class="m"><div class="m-label">Avg Quality</div><div class="m-val">${aq}<span class="m-sub">/100</span></div></div>
+    <div class="m"><div class="m-label">Avg Complete</div><div class="m-val">${ac}<span class="m-sub">/100</span></div></div>
+    <div class="m"><div class="m-label">Messages</div><div class="m-val">${ms}</div></div>
+  `;
+}
+
+function renderPipe() {
+  const ss = fData();
+  const el = document.getElementById('v-pipe');
+  let h = '';
+  STATES.forEach(st => {
+    const col = ss.filter(s => (s.outreach_state||'DISCOVERED')===st.key);
+    h += `<div class="p-col"><div class="p-head" style="background:${st.color}08;border-bottom:2px solid ${st.color}20"><span style="color:${st.color}">${st.icon} ${st.label}</span><span class="p-cnt">${col.length}</span></div><div class="p-cards">`;
+    col.forEach(s => {
+      const qs=s.qualification_score||0, cs=s.data_completeness_score||0;
+      const ch=s.outreach_channel||'', mc=CONVOS[s.id]?CONVOS[s.id].length:0;
+      h += `<div class="p-card" onclick="showD(${s.id})">
+        <div class="p-name">${s.trade_name}</div>
+        <div class="p-meta"><span>${s._country}</span>${mc?`<span>💬${mc}</span>`:''}${s.reply_count?`<span>↩️${s.reply_count}</span>`:''}</div>
+        <div class="p-bars"><div class="p-bar"><div class="p-fill" style="width:${qs}%;background:${qs>=70?'#22c55e':qs>=40?'#f59e0b':'#ef4444'}"></div></div><div class="p-bar"><div class="p-fill" style="width:${cs}%;background:#3b82f6"></div></div></div>
+        ${ch?`<div class="p-chip">${ch==='wechat'?'💚 WeChat':ch==='email'?'✉️ Email':ch==='zalo'?'💜 Zalo':ch==='line'?'💚 LINE':ch==='whatsapp'?'📱 WhatsApp':ch}</div>`:''}
+      </div>`;
+    });
+    h += '</div></div>';
+  });
+  el.innerHTML = h;
+}
+
+function renderFunnel() {
+  const ss = fData();
+  const el = document.getElementById('v-funnel');
+  const stages = ['DISCOVERED','ENRICHED','OUTREACH_SENT','CONVERSING','QUALIFIED','HUMAN_HANDOFF'];
+  const counts = stages.map(st => ss.filter(s => stages.indexOf(s.outreach_state||'DISCOVERED')>=stages.indexOf(st)).length);
+  const mx = Math.max(...counts,1);
+  let h = '<div style="display:flex;flex-direction:column;align-items:center;padding-top:16px">';
+  stages.forEach((st,i) => {
+    const state = STATES.find(s=>s.key===st);
+    const c=counts[i], pct=Math.max(Math.round(c/mx*100),12);
+    const prev=i>0?counts[i-1]:c;
+    const drop=i>0&&prev>0?Math.round((1-c/prev)*100):0;
+    h += `<div class="f-row" onclick="sv('pipe')"><div class="f-bar" style="width:${pct}%;background:${state.color}">${state.icon} ${c}</div><div class="f-info"><div class="f-lbl">${state.label}</div>${drop?`<div class="f-drop">↓${drop}% drop</div>`:''}</div></div>`;
+  });
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+function renderWflow() {
+  const el = document.getElementById('v-wflow');
+  const phases = [
+    {icon:'🔍',title:'INDEX',steps:['Discover new manufacturers','Enrich profiles (27+ fields)','Verify certifications','Score quality & completeness','Deduplicate against master DB']},
+    {icon:'📧',title:'OUTREACH',steps:['Select channel by region','Personalize message by profile','A/B test first-touch variants','Send multi-touch sequence','Respect anti-spam & rate limits']},
+    {icon:'💬',title:'ENGAGE',steps:['Auto-detect language & translate','Classify intent (interested/no/info)','Ask qualification questions','Track conversation state per flow','Escalate pricing/contracts to human']},
+    {icon:'👤',title:'HANDOFF',steps:['Generate handoff brief','Notify sourcing manager','Archive conversation log','Mark as handed off','Track post-handoff status']}
+  ];
+  let h = '<div class="wf-col">';
+  phases.forEach((p,i) => {
+    h += `<div class="wf-phase"><div class="wf-ptitle">${p.icon} ${p.title}</div><ul class="wf-steps">${p.steps.map(s=>`<li>${s}</li>`).join('')}</ul></div>`;
+    if (i<phases.length-1) h += '<div class="wf-arr">↓</div>';
+  });
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+function renderTbl() {
+  const ss = fData();
+  const el = document.getElementById('v-tbl');
+  const cols = ['trade_name','_country','outreach_state','qualification_score','data_completeness_score','reply_count','outreach_channel','wechat_id','certs_verified'];
+  const lbls = ['Name','Country','State','Quality','Complete','Replies','Channel','WeChat','Certs'];
+  let h = '<table><thead><tr>';
+  lbls.forEach(l => h+=`<th>${l}</th>`);
+  h += '</tr></thead><tbody>';
+  ss.forEach(s => {
+    h += `<tr onclick="showD(${s.id})">`;
+    cols.forEach(c => {
+      let v = s[c]||'—';
+      if (c==='outreach_state'){const st=STATES.find(x=>x.key===(v||'DISCOVERED'));v=st?`${st.icon} ${st.label}`:v;}
+      if (c==='certs_verified'){const cls=v==='VERIFIED'?'ct-v':v==='CLAIMED'?'ct-c':'ct-u';v=`<span class="ctag ${cls}">${(v||'UNVERIFIED').toLowerCase()}</span>`;}
+      h += `<td>${v}</td>`;
+    });
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  el.innerHTML = h;
+}
+
+function sv(v) {
+  document.querySelectorAll('.vt').forEach(t => t.classList.toggle('active', t.dataset.v===v));
+  ['pipe','funnel','wflow','tbl'].forEach(x => {
+    document.getElementById('v-'+x).style.display = x===v?'':'none';
+  });
+}
+
+/* ===== DETAIL MODAL ===== */
+function showD(id) {
+  const s = DATA.find(x=>x.id===id);
+  if (!s) return;
+  const st = STATES.find(x=>x.key===(s.outreach_state||'DISCOVERED'));
+  const cv = s.certs_verified||'UNVERIFIED';
+  const msgs = CONVOS[s.id]||[];
+  
+  let h = `<div class="mtop"><h2>${s.trade_name}</h2><button class="mx" onclick="closeM()">✕</button></div>`;
+  h += '<div class="minner">';
+  
+  h += `<div class="ms"><h3>Pipeline Status</h3><div class="mg">
+    <div><div class="mfl">State</div><div class="mfv">${st?.icon||''} ${st?.label||'—'}</div></div>
+    <div><div class="mfl">Quality Score</div><div class="mfv">${s.qualification_score||0}/100</div></div>
+    <div><div class="mfl">Completeness</div><div class="mfv">${s.data_completeness_score||0}/100</div></div>
+    <div><div class="mfl">Country</div><div class="mfv">${s._country}</div></div>
+    <div><div class="mfl">Replies</div><div class="mfv">${s.reply_count||0}</div></div>
+    <div><div class="mfl">NDA</div><div class="mfv">${s.nda_signed?'✅ Signed':s.nda_sent?'📤 Sent':'—'}</div></div>
+  </div></div>`;
+  
+  h += `<div class="ms"><h3>Company Information</h3><div class="mg">
+    <div><div class="mfl">Legal Name</div><div class="mfv ${s.legal_name?'':'e'}">${s.legal_name||'N/A'}</div></div>
+    <div><div class="mfl">Type</div><div class="mfv ${s.supplier_type?'':'e'}">${s.supplier_type||'N/A'}</div></div>
+    <div><div class="mfl">Factory</div><div class="mfv ${s.factory_locations?'':'e'}">${s.factory_locations||'N/A'}</div></div>
+    <div><div class="mfl">Experience</div><div class="mfv ${s.market_experience?'':'e'}">${s.market_experience||'N/A'}</div></div>
+    <div><div class="mfl">Brands</div><div class="mfv ${s.brands_worked_with?'':'e'}">${s.brands_worked_with||'N/A'}</div></div>
+    <div><div class="mfl">MOQ</div><div class="mfv ${s.moq?'':'e'}">${s.moq||'N/A'}</div></div>
+  </div></div>`;
+  
+  h += `<div class="ms"><h3>Contact & Certifications</h3><div class="mg">
+    <div><div class="mfl">Contact Name</div><div class="mfv ${s.contact_name?'':'e'}">${s.contact_name||'N/A'}</div></div>
+    <div><div class="mfl">WeChat</div><div class="mfv ${s.wechat_id?'':'e'}">${s.wechat_id||'Not found'}</div></div>
+    <div><div class="mfl">Certifications</div><div class="mfv">${s.certs_and_audits||'None listed'}</div></div>
+    <div><div class="mfl">Verified Notes</div><div class="mfv">${s.certs_verified_notes||'No notes'}</div></div>
+  </div></div>`;
+  
+  if (s.wechat_notes) {
+    h += `<div class="ms"><h3>WeChat Search Notes</h3><p style="font-size:11px;color:rgba(255,255,255,.4);line-height:1.5">${s.wechat_notes}</p></div>`;
+  }
+  
+  // Conversation
+  h += `<div class="ms"><h3>💬 Conversation</h3>`;
+  if (!msgs.length) {
+    h += `<div class="cvbox"><div style="text-align:center;padding:28px;color:rgba(255,255,255,.25);font-size:12px">💬 No conversation yet<br><span style="font-size:10px">Start outreach to begin</span></div></div>`;
+  } else {
+    const last = msgs[msgs.length-1];
+    const chs = [...new Set(msgs.map(m=>m.channel))];
+    h += `<div class="cvbox" id="cvb-${s.id}">
+      <div class="cvhead">
+        <div class="cvht">${msgs.length} messages · Last ${last.timestamp.split(' ')[0]}</div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="trb" id="trb-${s.id}" onclick="togTr(${s.id})">🌐 Translate</button>
+          ${chs.map(ch=>`<span class="cvch">${ch==='wechat'?'💚':ch==='email'?'✉️':ch==='zalo'?'💜':ch==='line'?'💚':ch==='whatsapp'?'📱':'📨'} ${ch}</span>`).join('')}
+        </div>
+      </div>
+      <div class="cvbody" id="cvbd-${s.id}">`;
+    
+    msgs.forEach(m => {
+      const out = m.direction==='outbound';
+      const tr = TRANSLATIONS[m.id]||null;
+      h += `<div class="cm ${out?'out':'in'}">
+        <div class="ca">${out?'🤖':'👤'}</div>
+        <div style="max-width:76%">
+          <div style="font-size:9px;color:rgba(255,255,255,.25);margin-bottom:1px;${out?'text-align:right':''}">${out?'Agent':s.trade_name} · ${m.channel} · ${m.timestamp.split(' ')[1]||''}</div>
+          <div class="cb">${m.content.replace(/\n/g,'<br>')}
+            ${tr?`<div class="ctr" data-t="${m.id}"><div class="ctrl">🌐 English Translation</div>${tr}</div>`:''}
+          </div>
+          <div class="cmm">
+            <span class="ctm">${m.timestamp.split(' ')[0]||''}</span>
+            ${m.agent_action?`<span class="cac">⚡ ${m.agent_action}</span>`:''}
+          </div>
+        </div>
+      </div>`;
+    });
+    
+    h += `</div>`;
+    
+    const curSt = s.outreach_state||'DISCOVERED';
+    const suggs = ({
+      'DISCOVERED':['Enrich this profile','Check cert databases'],
+      'ENRICHED':[`Send outreach to ${s.trade_name}`,'Draft WeChat intro'],
+      'OUTREACH_SENT':['Mark responding','Follow up (Day 3)','Follow up (Day 7)','Mark unresponsive'],
+      'CONVERSING':['Request sample pricing','Share NDA','Ask about capacity','Confirm jacquard capability'],
+      'QUALIFIED':['Hand off to sourcing mgr','Request video call'],
+      'NOT_INTERESTED':['Re-engage different angle','Wait 90 days'],
+      'UNRESPONSIVE':['Re-engage message','Try alternate channel']
+    })[curSt]||[];
+    
+    if (suggs.length) {
+      h += `<div class="csg"><div class="csgl">🤖 Suggested Replies</div><div class="csgc">`;
+      suggs.forEach(sg => { h += `<div class="csgch" onclick="useCh(this,'${sg.replace(/'/g,"\\'")}')">${sg}</div>`; });
+      h += `</div></div>`;
+    }
+    
+    h += `<div class="ccbar"><input class="ccinput" id="ci-${s.id}" placeholder="Compose a message..." onkeydown="if(event.key==='Enter')sendM(${s.id})"><button class="ccsend" onclick="sendM(${s.id})">Send</button></div></div>`;
+  }
+  h += `</div>`;
+  
+  // Actions
+  h += `<div class="ms"><h3>Agent Actions</h3><div class="act-row">`;
+  const cs = s.outreach_state||'DISCOVERED';
+  const nm = {
+    'DISCOVERED':[{to:'ENRICHED',label:'▶ Enrich Profile',cls:'go'}],
+    'ENRICHED':[{to:'OUTREACH_SENT',label:'📧 Send Outreach',cls:'go'},{to:'NOT_INTERESTED',label:'❌ Not Interested',cls:'no'}],
+    'OUTREACH_SENT':[{to:'CONVERSING',label:'💬 Mark Responding',cls:'go'},{to:'UNRESPONSIVE',label:'⏳ Unresponsive',cls:'wa'},{to:'NOT_INTERESTED',label:'❌ Not Interested',cls:'no'}],
+    'CONVERSING':[{to:'QUALIFIED',label:'✅ Qualify',cls:'go'},{to:'NOT_INTERESTED',label:'❌ Not Interested',cls:'no'}],
+    'QUALIFIED':[{to:'HUMAN_HANDOFF',label:'👤 Hand Off',cls:'go'}],
+    'HUMAN_HANDOFF':[],
+    'NOT_INTERESTED':[{to:'DISCOVERED',label:'🔄 Re-discover',cls:'go'}],
+    'UNRESPONSIVE':[{to:'OUTREACH_SENT',label:'📧 Re-outreach',cls:'go'}]
+  };
+  (nm[cs]||[]).forEach(a => {
+    h += `<button class="ab ${a.cls}" onclick="trS(${s.id},'${a.to}')">${a.label}</button>`;
+  });
+  h += '</div></div>';
+  
+  h += '</div>';
+  document.getElementById('mbox').innerHTML = h;
+  document.getElementById('modal').classList.add('show');
+  
+  setTimeout(() => { const b = document.getElementById('cvbd-'+s.id); if(b) b.scrollTop = b.scrollHeight; }, 60);
+}
+
+function togTr(sid) {
+  const btn = document.getElementById('trb-'+sid);
+  const box = document.getElementById('cvb-'+sid);
+  if (!btn||!box) return;
+  const on = btn.classList.toggle('on');
+  box.querySelectorAll('.ctr').forEach(el => el.classList.toggle('vis', on));
+  btn.textContent = on ? '🌐 Translated ✓' : '🌐 Translate';
+}
+
+function useCh(el, text) {
+  const input = el.closest('.cvbox').querySelector('.ccinput');
+  if (input) input.value = text;
+}
+
+function sendM(sid) {
+  const input = document.getElementById('ci-'+sid);
+  if (!input||!input.value.trim()) return;
+  input.value = '';
+  toast('📤 Message queued for ' + (DATA.find(s=>s.id===sid)?.trade_name||'supplier'));
+}
+
+function trS(id, to) {
+  const s = DATA.find(x => x.id === id);
+  if (!s) return;
+  s.outreach_state = to;
+  const st = STATES.find(x => x.key === to);
+  toast(`✅ ${s.trade_name} → ${st?.label||to}`);
+  closeM();
+  renderFlow();
+}
+
+function closeM() { document.getElementById('modal').classList.remove('show'); }
+
+/* ===== WIZARD ===== */
+function openWiz() {
+  const el = document.getElementById('wbox');
+  el.innerHTML = `<div class="mtop"><h2>+ New Capability Search</h2><button class="mx" onclick="closeW()">✕</button></div>
+  <div class="minner">
+    <div class="ws"><h4>1. Product Category</h4>
+      <div class="wo" onclick="wSel(this,'cat','towels')">🧖 Luxury Towels</div>
+      <div class="wo" onclick="wSel(this,'cat','bedding')">🛏️ Premium Bedding</div>
+      <div class="wo" onclick="wSel(this,'cat','apparel')">👕 Organic Apparel</div>
+      <div class="wo" onclick="wSel(this,'cat','kitchen')">🍳 Kitchen Textiles</div>
+      <div class="wo" onclick="wSel(this,'cat','bath')">🧼 Bath Accessories</div>
+      <div class="wo" onclick="wSel(this,'cat','custom')">✏️ Custom / Other</div>
+    </div>
+    <div class="ws"><h4>2. Flow Name</h4>
+      <input class="winp" id="wname" placeholder="e.g., Luxury Towels — Hotel & Resort">
+    </div>
+    <div class="ws"><h4>3. Target Regions</h4>
+      <div class="wtags" id="wregions">
+        <div class="wtag" onclick="wTag(this)">🇨🇳 China</div>
+        <div class="wtag" onclick="wTag(this)">🇹🇼 Taiwan</div>
+        <div class="wtag" onclick="wTag(this)">🇯🇵 Japan</div>
+        <div class="wtag" onclick="wTag(this)">🇻🇳 Vietnam</div>
+        <div class="wtag" onclick="wTag(this)">🇹🇭 Thailand</div>
+        <div class="wtag" onclick="wTag(this)">🇮🇩 Indonesia</div>
+        <div class="wtag" onclick="wTag(this)">🇮🇳 India</div>
+        <div class="wtag" onclick="wTag(this)">🇧🇩 Bangladesh</div>
+        <div class="wtag" onclick="wTag(this)">🇵🇰 Pakistan</div>
+        <div class="wtag" onclick="wTag(this)">🇲🇾 Malaysia</div>
+      </div>
+    </div>
+    <div class="ws"><h4>4. Required Certifications</h4>
+      <div class="wtags">
+        <div class="wtag" onclick="wTag(this)">OEKO-TEX</div>
+        <div class="wtag" onclick="wTag(this)">GOTS</div>
+        <div class="wtag" onclick="wTag(this)">WRAP</div>
+        <div class="wtag" onclick="wTag(this)">BSCI</div>
+        <div class="wtag" onclick="wTag(this)">Fair Trade</div>
+      </div>
+    </div>
+    <button class="wlaunch" onclick="createF()">🚀 Create Flow & Start Indexing</button>
+  </div>`;
+  document.getElementById('wmodal').classList.add('show');
+}
+
+function closeW() { document.getElementById('wmodal').classList.remove('show'); }
+let wData = {cat:''};
+function wSel(el, f, v) { el.parentElement.querySelectorAll('.wo').forEach(o=>o.classList.remove('sel')); el.classList.add('sel'); wData[f]=v; }
+function wTag(el) { el.classList.toggle('sel'); }
+function createF() {
+  const name = document.getElementById('wname')?.value || 'New Flow';
+  toast('🚀 Flow "' + name + '" created! Starting indexing...');
+  closeW();
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity='1';
+  setTimeout(()=>t.style.opacity='0', 2800);
+}
+
+function agent(a) { toast(`🤖 Agent triggered: ${a}`); }
+
+renderLanding();
+</script>
+</body>
+</html>
